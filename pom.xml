@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<parent>
+		<groupId>sc.fiji</groupId>
+		<artifactId>pom-fiji</artifactId>
+		<version>26.1.1</version>
+		<relativePath />
+	</parent>
+
+	<artifactId>CircleSkinner</artifactId>
+	<version>0.1.0-SNAPSHOT</version>
+
+	<name>plugins/CircleSkinner_.jar</name>
+	<description>A Fiji plugin for the automated detection and quantification of circular structure in images.</description>
+
+	<developers>
+		<developer>
+			<id>tinevez</id>
+			<name>Jean-Yves Tinevez</name>
+			<url>http://imagej.net/User:JeanYvesTinevez</url>
+			<roles>
+				<role>founder</role>
+				<role>lead</role>
+				<role>developer</role>
+				<role>debugger</role>
+				<role>reviewer</role>
+				<role>support</role>
+				<role>maintainer</role>
+			</roles>
+		</developer>
+	</developers>
+
+	<scm>
+		<connection>scm:git:git://github.com/tinevez/CircleSkinner</connection>
+		<developerConnection>scm:git:git@github.com:tinevez/CircleSkinner</developerConnection>
+		<tag>HEAD</tag>
+		<url>https://github.com/tinevez/CircleSkinner</url>
+	</scm>
+	<issueManagement>
+		<system>GitHub Issues</system>
+		<url>https://github.com/tinevez/CircleSkinner/issues</url>
+	</issueManagement>
+
+	<properties>
+		<!-- Target Fiji dir for clean upload. -->
+		<imagej.app.directory>../Fiji.app/</imagej.app.directory>
+	</properties>
+
+	<repositories>
+		<!-- NB: for project parent -->
+		<repository>
+			<id>imagej.public</id>
+			<url>http://maven.imagej.net/content/groups/public</url>
+		</repository>
+	</repositories>
+
+	<dependencies>
+		<!-- Fiji dependencies -->
+		<dependency>
+			<groupId>sc.fiji</groupId>
+			<artifactId>VIB-lib</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>net.imglib2</groupId>
+			<artifactId>imglib2-ij</artifactId>
+		</dependency>
+	</dependencies>
+</project>
