@@ -1,8 +1,6 @@
 package net.imagej.circleskinner;
 
-import java.awt.GraphicsConfiguration;
-import java.awt.GraphicsDevice;
-import java.awt.GraphicsEnvironment;
+import java.io.IOException;
 
 import org.scijava.command.Command;
 import org.scijava.log.LogService;
@@ -11,21 +9,22 @@ import org.scijava.plugin.Plugin;
 import org.scijava.ui.UIService;
 
 import features.TubenessProcessor;
-import ij.ImageJ;
-import ij.ImagePlus;
 import net.imagej.Dataset;
+import net.imagej.ImageJ;
 import net.imagej.axis.Axes;
+import net.imagej.ops.OpService;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.Img;
-import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.type.numeric.RealType;
+import net.imglib2.type.numeric.real.DoubleType;
+import net.imglib2.util.Util;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
+import net.imglib2.view.composite.RealComposite;
 
 
 @Plugin( type = Command.class, menuPath = "Plugins > Circle skinner" )
-public class CircleSkinner< T extends RealType< T > > implements Command // ,
-																			// Initializable
+public class CircleSkinner< T extends RealType< T > > implements Command
 {
 	@Parameter
 	private Dataset source;
@@ -33,8 +32,8 @@ public class CircleSkinner< T extends RealType< T > > implements Command // ,
 	@Parameter
 	private UIService uiService;
 
-//	@Parameter
-//	private OpService ops;
+	@Parameter
+	private OpService ops;
 
 	@Parameter
 	private LogService log;
@@ -43,20 +42,16 @@ public class CircleSkinner< T extends RealType< T > > implements Command // ,
 	 * The sigma for Tubeness filter, in pixel units.
 	 */
 	@Parameter( label = "Sigma tubeness" )
-	private final double sigmaTubeness = 4.;
+	private double sigmaTubeness = 4.;
 
 	private TubenessProcessor tubenessProcessor;
 
-//	@Override
-	public void initialize()
-	{
-		System.out.println( "I was initialized" ); // DEBUG
-		tubenessProcessor = new TubenessProcessor( sigmaTubeness, false );
-	}
 
 	@Override
 	public void run()
 	{
+		tubenessProcessor = new TubenessProcessor( sigmaTubeness, false );
+
 		@SuppressWarnings( "unchecked" )
 		final Img< T > img = ( Img< T > ) source.getImgPlus().getImg();
 
@@ -82,6 +77,8 @@ public class CircleSkinner< T extends RealType< T > > implements Command // ,
 				@SuppressWarnings( "unchecked" )
 				final IntervalView< T > channel = ( IntervalView< T > ) Views.hyperSlice( source.getImgPlus().getImg(), cId, c );
 				processChannel( channel );
+
+				break; // DEBUG
 			}
 		}
 
@@ -89,22 +86,18 @@ public class CircleSkinner< T extends RealType< T > > implements Command // ,
 
 	private void processChannel( final RandomAccessibleInterval< T > channel )
 	{
-		final ImagePlus cimp = tubenessProcessor.generateImage( ImageJFunctions.wrap( channel, "Channel " + channel ) );
-
+		@SuppressWarnings( "unchecked" )
+		final TubenessOp< T > op = ops.op( TubenessOp.class, channel, sigmaTubeness, Util.getArrayFromValue( 1., channel.numDimensions() ) );
+		final RandomAccessibleInterval< RealComposite< DoubleType > > H = op.compute1( channel );
+		uiService.show( H );
 	}
 
-	public static void main( final String[] args )
+	public static void main( final String[] args ) throws IOException
 	{
-		System.out.println( "Launching ImageJ" );
-		final GraphicsEnvironment localGraphicsEnvironment = GraphicsEnvironment.getLocalGraphicsEnvironment();
-		System.out.println( localGraphicsEnvironment ); // DEBUG
-		final GraphicsDevice defaultScreenDevice = localGraphicsEnvironment.getDefaultScreenDevice();
-		System.out.println( defaultScreenDevice ); // DEBUG
-		final GraphicsConfiguration defaultConfiguration = defaultScreenDevice.getDefaultConfiguration();
-		System.out.println( defaultConfiguration ); // DEBUG
-
-		ImageJ.main( args );
-		System.out.println( "ImageJ launched" );
+		final ImageJ ij = new net.imagej.ImageJ();
+		ij.launch( args );
+		final Object dataset = ij.io().open( "samples/ca-01.lsm" );
+		ij.ui().show( dataset );
 	}
 
 }
