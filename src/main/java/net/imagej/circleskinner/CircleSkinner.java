@@ -8,11 +8,13 @@ import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 import org.scijava.ui.UIService;
 
-import features.TubenessProcessor;
 import net.imagej.Dataset;
 import net.imagej.ImageJ;
+import net.imagej.ImgPlus;
 import net.imagej.axis.Axes;
 import net.imagej.ops.OpService;
+import net.imagej.ops.special.function.Functions;
+import net.imagej.ops.special.function.UnaryFunctionOp;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.Img;
 import net.imglib2.type.numeric.RealType;
@@ -20,7 +22,6 @@ import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.util.Util;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
-import net.imglib2.view.composite.RealComposite;
 
 
 @Plugin( type = Command.class, menuPath = "Plugins > Circle skinner" )
@@ -44,22 +45,16 @@ public class CircleSkinner< T extends RealType< T > > implements Command
 	@Parameter( label = "Sigma tubeness" )
 	private double sigmaTubeness = 4.;
 
-	private TubenessProcessor tubenessProcessor;
-
-
 	@Override
 	public void run()
 	{
-		tubenessProcessor = new TubenessProcessor( sigmaTubeness, false );
-
 		@SuppressWarnings( "unchecked" )
-		final Img< T > img = ( Img< T > ) source.getImgPlus().getImg();
-
+		final ImgPlus< T > img = ( ImgPlus< T > ) source.getImgPlus();
 		// Find channel axis index.
 		int cId = -1;
-		for ( int d = 0; d < source.numDimensions(); d++ )
+		for ( int d = 0; d < img.numDimensions(); d++ )
 		{
-			if (source.axis( d ) ==  Axes.CHANNEL )
+			if ( img.axis( d ).type().equals( Axes.CHANNEL ) )
 			{
 				cId =  d;
 				break;
@@ -68,7 +63,7 @@ public class CircleSkinner< T extends RealType< T > > implements Command
 
 		if (cId < 0)
 		{
-			processChannel( img );
+			processChannel( img.getImg() );
 		}
 		else
 		{
@@ -77,8 +72,6 @@ public class CircleSkinner< T extends RealType< T > > implements Command
 				@SuppressWarnings( "unchecked" )
 				final IntervalView< T > channel = ( IntervalView< T > ) Views.hyperSlice( source.getImgPlus().getImg(), cId, c );
 				processChannel( channel );
-
-				break; // DEBUG
 			}
 		}
 
@@ -86,9 +79,11 @@ public class CircleSkinner< T extends RealType< T > > implements Command
 
 	private void processChannel( final RandomAccessibleInterval< T > channel )
 	{
+		@SuppressWarnings( "rawtypes" )
+		final UnaryFunctionOp< RandomAccessibleInterval< T >, RandomAccessibleInterval > op =
+				Functions.unary( ops, TubenessOp.class, RandomAccessibleInterval.class, channel, sigmaTubeness, Util.getArrayFromValue( 1., channel.numDimensions() ) );
 		@SuppressWarnings( "unchecked" )
-		final TubenessOp< T > op = ops.op( TubenessOp.class, channel, sigmaTubeness, Util.getArrayFromValue( 1., channel.numDimensions() ) );
-		final RandomAccessibleInterval< RealComposite< DoubleType > > H = op.compute1( channel );
+		final Img< DoubleType > H = ( Img< DoubleType > ) op.compute1( channel );
 		uiService.show( H );
 	}
 
