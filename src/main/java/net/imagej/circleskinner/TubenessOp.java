@@ -86,16 +86,16 @@ public class TubenessOp< T extends RealType< T > >
 					factory, new DoubleType(),
 					nThreads, es );
 
-			// Tubeness is derived from largest eignevalues.
+			// Tubeness is derived from largest eigenvalues.
 			final Img< DoubleType > tubeness = ops().create().img( input, new DoubleType() );
 			final AbstractUnaryComputerOp< Iterable< DoubleType >, DoubleType > method;
 			switch ( numDimensions )
 			{
 			case 2:
-				method = new Tubeness2D();
+				method = new Tubeness2D( sigma );
 				break;
 			case 3:
-				method = new Tubeness3D();
+				method = new Tubeness3D( sigma );
 			default:
 				System.err.println( "Cannot compute tubeness for " + numDimensions + "D images." );
 				return null;
@@ -113,6 +113,13 @@ public class TubenessOp< T extends RealType< T > >
 	private static final class Tubeness2D extends AbstractUnaryComputerOp< Iterable< DoubleType >, DoubleType >
 	{
 
+		private double sigma;
+
+		public Tubeness2D( final double sigma )
+		{
+			this.sigma = sigma;
+		}
+
 		@Override
 		public void compute1( final Iterable< DoubleType > input, final DoubleType output )
 		{
@@ -123,13 +130,20 @@ public class TubenessOp< T extends RealType< T > >
 			if ( val >= 0. )
 				output.setZero();
 			else
-				output.set( Math.abs( val ) );
+				output.set( sigma * sigma * Math.abs( val ) );
 
 		}
 	}
 
 	private static final class Tubeness3D extends AbstractUnaryComputerOp< Iterable< DoubleType >, DoubleType >
 	{
+
+		private double sigma;
+
+		public Tubeness3D( final double sigma )
+		{
+			this.sigma = sigma;
+		}
 
 		@Override
 		public void compute1( final Iterable< DoubleType > input, final DoubleType output )
@@ -142,7 +156,7 @@ public class TubenessOp< T extends RealType< T > >
 			if ( val1 >= 0. || val2 >= 0. )
 				output.setZero();
 			else
-				output.set( Math.sqrt( val1 * val2 ) );
+				output.set( sigma * sigma * Math.sqrt( val1 * val2 ) );
 
 		}
 	}
