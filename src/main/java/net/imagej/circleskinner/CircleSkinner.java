@@ -21,9 +21,13 @@ import net.imagej.ops.OpService;
 import net.imagej.ops.special.function.Functions;
 import net.imagej.ops.special.function.UnaryFunctionOp;
 import net.imglib2.IterableInterval;
+import net.imglib2.Localizable;
 import net.imglib2.Point;
+import net.imglib2.RandomAccess;
 import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.Sampler;
 import net.imglib2.algorithm.localextrema.LocalExtrema;
+import net.imglib2.algorithm.neighborhood.Neighborhood;
 import net.imglib2.img.Img;
 import net.imglib2.type.logic.BitType;
 import net.imglib2.type.numeric.RealType;
@@ -56,6 +60,9 @@ public class CircleSkinner< T extends RealType< T > > implements Command
 	 */
 	@Parameter( label = "Circle thickness", min = "1", type = ItemIO.INPUT )
 	private double circleThickness = 4.;
+
+	@Parameter( label = "Circle detection sensitivity", min = "1", type = ItemIO.INPUT )
+	private double sensitivity = 10.;
 
 	@Override
 	public void run()
@@ -134,29 +141,14 @@ public class CircleSkinner< T extends RealType< T > > implements Command
 		/*
 		 * Detect maxima on vote image.
 		 */
-		
-		final Img< DoubleType > dog = ops.create().img( voteImg );
-		final double[] sigma1 = new double[ dog.numDimensions() ];
-		final double[] sigma2 = new double[ dog.numDimensions() ];
-		final double K = 1.6;
-		for ( int d = 0; d < channel.numDimensions(); d++ )
-		{
-			sigma1[ d ] = sigma;
-			sigma2[ d ] = sigma / K;
-		}
-//		sigma[ channel.numDimensions() ] =
 
-		ops.filter().dog( dog, voteImg, sigma, 0.95 * sigma ); // Give max.
-		uiService.show( "DoG", dog );
+//		final Img< DoubleType > dog = ops.create().img( voteImg );
+//		ops.filter().dog( dog, voteImg, sigma, 0.95 * sigma ); // Give max.
+//		uiService.show( "DoG", dog );
 
-		final int nThreads = Runtime.getRuntime().availableProcessors();
+		final MyLocalExtremaCheck check = new MyLocalExtremaCheck( voteImg.randomAccess( voteImg ), minRadius, stepRadius, circleThickness, sensitivity );
 		final ExecutorService es = threadService.getExecutorService();
-		
-		final DoubleType minPeakValue = new DoubleType( 2. * Math.PI * minRadius / 2. / Math.PI / sigma / sigma / ( 1. - 0.95 ) );
-		System.out.println( "Min peak value: " + minPeakValue ); // DEBUG
-
-		final LocalExtrema.MaximumCheck< DoubleType > check = new LocalExtrema.MaximumCheck<>( minPeakValue );
-		final ArrayList< Point > maxima = LocalExtrema.findLocalExtrema( dog, check, es );
+		final ArrayList< Point > maxima = LocalExtrema.findLocalExtrema( voteImg, check, es );
 		System.out.println( maxima ); // DEBUG
 
 		/*
@@ -174,4 +166,48 @@ public class CircleSkinner< T extends RealType< T > > implements Command
 		ij.ui().show( dataset );
 	}
 
+	private static class MyLocalExtremaCheck implements LocalExtrema.LocalNeighborhoodCheck< Point, DoubleType >
+	{
+
+		private RandomAccess< DoubleType > reference;
+
+		private int minRadius;
+
+		private int stepRadius;
+
+		private double thickness;
+
+		private double sensitivity;
+
+		public MyLocalExtremaCheck( final RandomAccess< DoubleType > reference, final int minRadius, final int stepRadius, final double thickness, final double sensitivity )
+		{
+			this.minRadius = minRadius;
+			this.stepRadius = stepRadius;
+			this.reference = reference;
+			this.thickness = thickness;
+			this.sensitivity = sensitivity;
+		}
+
+		@Override
+		public < C extends Localizable & Sampler< DoubleType > > Point check( final C center, final Neighborhood< DoubleType > neighborhood )
+		{
+			// What radius is the center on?
+			final double i = center.getDoublePosition( center.numDimensions() - 1 );
+			// Determine sensible threshold, assuming that the center has been
+			// voted a certain number of times.
+			final double radius = minRadius + i * stepRadius;
+			final double threshold = 2. * Math.PI * radius * thickness / sensitivity;
+
+			reference.setPosition( center );
+			if ( reference.get().get() < threshold )
+				return null;
+
+			for ( final DoubleType d : neighborhood )
+				if ( d.compareTo( center.get() ) >= 0 )
+					return null;
+
+			return new Point( center );
+		}
+
+	}
 }
