@@ -13,8 +13,11 @@ import net.imglib2.Localizable;
 import net.imglib2.Point;
 import net.imglib2.RandomAccess;
 import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.RealPoint;
 import net.imglib2.Sampler;
 import net.imglib2.algorithm.localextrema.LocalExtrema;
+import net.imglib2.algorithm.localextrema.RefinedPeak;
+import net.imglib2.algorithm.localextrema.SubpixelLocalization;
 import net.imglib2.algorithm.neighborhood.Neighborhood;
 import net.imglib2.img.Img;
 import net.imglib2.img.display.imagej.ImageJFunctions;
@@ -25,7 +28,7 @@ import net.imglib2.view.Views;
 
 @Plugin( type = HoughDetectorOp.class )
 public class HoughDetectorOp< T extends RealType< T > >
-		extends AbstractUnaryFunctionOp< RandomAccessibleInterval< T >, Collection< Point > >
+		extends AbstractUnaryFunctionOp< RandomAccessibleInterval< T >, Collection< HoughCircle > >
 {
 
 	private static final double K = 1.6;
@@ -46,11 +49,11 @@ public class HoughDetectorOp< T extends RealType< T > >
 	private double sensitivity = 20.;
 
 	@Override
-	public Collection< Point > compute1( final RandomAccessibleInterval< T > input )
+	public Collection< HoughCircle > compute1( final RandomAccessibleInterval< T > input )
 	{
 		final int numDimensions = input.numDimensions();
-		final double sigma = circleThickness / 2./ Math.sqrt( numDimensions -1 );
-		final int radiusDim = numDimensions;
+		final double sigma = circleThickness / Math.sqrt( numDimensions - 1 );
+		final int radiusDim = numDimensions - 1;
 
 		/*
 		 * Filter input as a collection of 2D slices.
@@ -68,11 +71,40 @@ public class HoughDetectorOp< T extends RealType< T > >
 		/*
 		 * Detect maxima with a threshold that depends on candidate radius.
 		 */
+
 		final MyLocalExtremaCheck check = new MyLocalExtremaCheck( input.randomAccess( input ) );
 		final ExecutorService es = threadService.getExecutorService();
 		final ArrayList< Point > maxima = LocalExtrema.findLocalExtrema( filtered, check, es );
-		
-		return maxima;
+
+		/*
+		 * Refine maxima position.
+		 */
+
+		final SubpixelLocalization< Point, DoubleType > spl = new SubpixelLocalization<>( filtered.numDimensions() );
+		spl.setAllowMaximaTolerance( true );
+		spl.setMaxNumMoves( 10 );
+		final ArrayList< RefinedPeak< Point > > refined = spl.process( maxima, filtered, filtered );
+
+		System.out.println( maxima ); // DEBUG
+		System.out.println( refined ); // DEBUG
+
+		/*
+		 * Create circles.
+		 */
+
+		final ArrayList< HoughCircle > circles = new ArrayList<>( refined.size() );
+		for ( final RefinedPeak< Point > peak : refined )
+		{
+
+			final RealPoint center = new RealPoint( numDimensions - 1 );
+			for ( int d = 0; d < numDimensions - 1; d++ )
+				center.setPosition( peak.getDoublePosition( d ), d );
+
+			final double radius = minRadius + ( peak.getDoublePosition( numDimensions - 1 ) ) * stepRadius;
+			circles.add( new HoughCircle( center, radius ) );
+		}
+
+		return circles;
 	}
 
 	private class MyLocalExtremaCheck implements LocalExtrema.LocalNeighborhoodCheck< Point, DoubleType >

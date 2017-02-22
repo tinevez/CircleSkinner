@@ -1,8 +1,8 @@
 package net.imagej.circleskinner;
 
+import java.awt.Color;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.concurrent.ExecutorService;
+import java.util.Collection;
 
 import org.scijava.ItemIO;
 import org.scijava.command.Command;
@@ -12,10 +12,15 @@ import org.scijava.plugin.Plugin;
 import org.scijava.thread.ThreadService;
 import org.scijava.ui.UIService;
 
+import ij.ImagePlus;
+import ij.gui.Overlay;
+import ij.gui.Roi;
 import net.imagej.Dataset;
 import net.imagej.ImageJ;
 import net.imagej.ImgPlus;
 import net.imagej.axis.Axes;
+import net.imagej.circleskinner.hough.HoughCircle;
+import net.imagej.circleskinner.hough.HoughDetectorOp;
 import net.imagej.circleskinner.hough.HoughTransformOp;
 import net.imagej.ops.OpService;
 import net.imagej.ops.special.function.Functions;
@@ -29,6 +34,7 @@ import net.imglib2.Sampler;
 import net.imglib2.algorithm.localextrema.LocalExtrema;
 import net.imglib2.algorithm.neighborhood.Neighborhood;
 import net.imglib2.img.Img;
+import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.type.logic.BitType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.DoubleType;
@@ -67,6 +73,15 @@ public class CircleSkinner< T extends RealType< T > > implements Command
 	@Override
 	public void run()
 	{
+		final Color[] colors = new Color[]
+				{
+						Color.YELLOW,
+						Color.MAGENTA,
+						Color.CYAN,
+						Color.GREEN,
+				};
+
+
 		@SuppressWarnings( "unchecked" )
 		final ImgPlus< T > img = ( ImgPlus< T > ) source.getImgPlus();
 		// Find channel axis index.
@@ -82,7 +97,8 @@ public class CircleSkinner< T extends RealType< T > > implements Command
 
 		if (cId < 0)
 		{
-			processChannel( img.getImg() );
+			final Collection< HoughCircle > circles = processChannel( img.getImg() );
+			showCircles( circles, img, colors[ 0 ] );
 		}
 		else
 		{
@@ -90,20 +106,43 @@ public class CircleSkinner< T extends RealType< T > > implements Command
 			{
 				@SuppressWarnings( "unchecked" )
 				final IntervalView< T > channel = ( IntervalView< T > ) Views.hyperSlice( source.getImgPlus().getImg(), cId, c );
-				processChannel( channel );
+				final Collection< HoughCircle > circles = processChannel( channel );
+				showCircles( circles, img, colors[ c ] );
 				break; // DEBUG
 			}
 		}
 
 	}
 
-	private void processChannel( final RandomAccessibleInterval< T > channel )
+	private void showCircles( final Collection< HoughCircle > circles, final ImgPlus< T > img, final Color color )
+	{
+		System.out.println( circles ); // DEBUG
+
+		final ImagePlus imp = ImageJFunctions.show( img, "Hough circle detection" );
+		final Overlay overlay = new Overlay();
+		imp.setOverlay( overlay );
+
+		for ( final HoughCircle circle : circles )
+		{
+			final double x1 = circle.getDoublePosition( 0 ) - circle.getRadius();
+			final double y1 = circle.getDoublePosition( 1 ) - circle.getRadius();
+			final double diameter = 2. * circle.getRadius();
+			final Roi roi = new Roi( x1, y1, diameter, diameter );
+			roi.setStrokeColor( color );
+			overlay.add( roi );
+		}
+
+		imp.updateAndDraw();
+
+	}
+
+	private Collection< HoughCircle > processChannel( final RandomAccessibleInterval< T > channel )
 	{
 		final double sigma = circleThickness / 2. / Math.sqrt( channel.numDimensions() );
 
-		final int minRadius = 50;
-		final int maxRadius = 100;
-		final int stepRadius = 4;
+		final double minRadius = 50.;
+		final double maxRadius = 100.;
+		final double stepRadius = 2.;
 
 		/*
 		 * Filter using tubeness.
@@ -115,14 +154,14 @@ public class CircleSkinner< T extends RealType< T > > implements Command
 						channel, sigma, Util.getArrayFromValue( 1., channel.numDimensions() ) );
 		@SuppressWarnings( "unchecked" )
 		final Img< DoubleType > H = ( Img< DoubleType > ) tubenessOp.compute1( channel );
-		uiService.show( "Tubeness", H ); // DEBUG
+//		uiService.show( "Tubeness", H ); // DEBUG
 
 		/*
 		 * Threshold with Otsu.
 		 */
 
 		final IterableInterval< BitType > thresholded = ops.threshold().otsu( H );
-		uiService.show( "Thresholded", thresholded ); // DEBUG
+//		uiService.show( "Thresholded", thresholded ); // DEBUG
 
 		/*
 		 * Hough transform
@@ -135,27 +174,20 @@ public class CircleSkinner< T extends RealType< T > > implements Command
 						thresholded, minRadius, maxRadius, stepRadius );
 		@SuppressWarnings( "unchecked" )
 		final Img< DoubleType > voteImg = ( Img< DoubleType > ) houghTransformOp.compute1( thresholded );
-		uiService.show( "VoteImg", voteImg ); // DEBUG
-		System.out.println( " Done." ); // DEBUG
+//		uiService.show( "VoteImg", voteImg ); // DEBUG
+//		System.out.println( " Done." ); // DEBUG
 
 		/*
 		 * Detect maxima on vote image.
 		 */
 
-//		final Img< DoubleType > dog = ops.create().img( voteImg );
-//		ops.filter().dog( dog, voteImg, sigma, 0.95 * sigma ); // Give max.
-//		uiService.show( "DoG", dog );
-
-		final MyLocalExtremaCheck check = new MyLocalExtremaCheck( voteImg.randomAccess( voteImg ), minRadius, stepRadius, circleThickness, sensitivity );
-		final ExecutorService es = threadService.getExecutorService();
-		final ArrayList< Point > maxima = LocalExtrema.findLocalExtrema( voteImg, check, es );
-		System.out.println( maxima ); // DEBUG
-
-		/*
-		 * Localize maxima.
-		 */
-
-
+		@SuppressWarnings( "rawtypes" )
+		final UnaryFunctionOp< Img< DoubleType >, Collection > houghDetectOp =
+				Functions.unary( ops, HoughDetectorOp.class, Collection.class,
+						voteImg, circleThickness, minRadius, stepRadius, sensitivity );
+		@SuppressWarnings( "unchecked" )
+		final Collection< HoughCircle > circles = houghDetectOp.compute1( voteImg );
+		return circles;
 	}
 
 	public static void main( final String[] args ) throws IOException
