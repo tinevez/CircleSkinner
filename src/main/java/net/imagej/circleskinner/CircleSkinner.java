@@ -14,8 +14,6 @@ import org.scijava.ui.UIService;
 
 import ij.ImagePlus;
 import ij.gui.Overlay;
-import ij.gui.Roi;
-import ij.gui.TextRoi;
 import net.imagej.Dataset;
 import net.imagej.ImageJ;
 import net.imagej.ImgPlus;
@@ -23,7 +21,7 @@ import net.imagej.axis.Axes;
 import net.imagej.circleskinner.hough.HoughCircle;
 import net.imagej.circleskinner.hough.HoughDetectorOp;
 import net.imagej.circleskinner.hough.HoughTransformOp;
-import net.imagej.circleskinner.util.ColorMap;
+import net.imagej.circleskinner.util.HoughCircleOverlay;
 import net.imagej.ops.OpService;
 import net.imagej.ops.special.function.Functions;
 import net.imagej.ops.special.function.UnaryFunctionOp;
@@ -37,7 +35,6 @@ import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.util.Util;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
-import scala.collection.immutable.HashMap;
 
 
 @Plugin( type = Command.class, menuPath = "Plugins > Circle skinner" )
@@ -72,7 +69,17 @@ public class CircleSkinner< T extends RealType< T > > implements Command
 	{
 		@SuppressWarnings( "unchecked" )
 		final ImgPlus< T > img = ( ImgPlus< T > ) source.getImgPlus();
-		final ImagePlus imp = ImageJFunctions.show( img, "Results" ); // DEBUG
+
+		final ImagePlus imp = ImageJFunctions.show( img, "Results" );
+		Overlay overlay = imp.getOverlay();
+		if ( null == overlay )
+		{
+			overlay = new Overlay();
+			imp.setOverlay( overlay );
+		}
+		final HoughCircleOverlay circleOverlay = new HoughCircleOverlay( imp );
+		overlay.add( circleOverlay, "Hough circles" );
+
 		// Find channel axis index.
 		int cId = -1;
 		for ( int d = 0; d < img.numDimensions(); d++ )
@@ -87,7 +94,7 @@ public class CircleSkinner< T extends RealType< T > > implements Command
 		if (cId < 0)
 		{
 			final List< HoughCircle > circles = processChannel( img.getImg() );
-			showCircles( circles, imp, 0 );
+			circleOverlay.setCircles( circles, 0 );
 		}
 		else
 		{
@@ -96,45 +103,9 @@ public class CircleSkinner< T extends RealType< T > > implements Command
 				@SuppressWarnings( "unchecked" )
 				final IntervalView< T > channel = ( IntervalView< T > ) Views.hyperSlice( source.getImgPlus().getImg(), cId, c );
 				final List< HoughCircle > circles = processChannel( channel );
-				showCircles( circles, imp, c );
+				circleOverlay.setCircles( circles, c );
 			}
 		}
-
-	}
-
-	private void showCircles( final List< HoughCircle > circles, final ImagePlus imp, final int channel )
-	{
-		Overlay overlay = imp.getOverlay();
-		if ( null == overlay )
-		{
-			overlay = new Overlay();
-			imp.setOverlay( overlay );
-		}
-
-		final ColorMap jet = ColorMap.jet();
-		final double max = circles.get( 0 ).getSensitivity();
-		final double min = circles.get( circles.size() - 1 ).getSensitivity();
-
-		for ( final HoughCircle circle : circles )
-		{
-			final double x1 = circle.getDoublePosition( 0 ) - circle.getRadius();
-			final double y1 = circle.getDoublePosition( 1 ) - circle.getRadius();
-			final double diameter = 2. * circle.getRadius();
-			final Roi roi = new Roi( x1, y1, diameter, diameter );
-
-			final double alpha = ( circle.getSensitivity() - min ) / ( max - min );
-			roi.setStrokeColor( jet.get( alpha ) );
-			overlay.add( roi );
-
-			final TextRoi tr = new TextRoi(
-					circle.getDoublePosition( 0 ),
-					circle.getDoublePosition( 1 ),
-					String.format( "C=%d, Stivity=%.1f", channel, circle.getSensitivity() ) );
-			tr.setStrokeColor( jet.get( alpha ) );
-			overlay.add( tr );
-		}
-
-		imp.updateAndDraw();
 
 	}
 
@@ -193,6 +164,6 @@ public class CircleSkinner< T extends RealType< T > > implements Command
 		ij.launch( args );
 		final Object dataset = ij.io().open( "samples/ca-01.lsm" );
 		ij.ui().show( dataset );
-		ij.command().run( CircleSkinner.class, true, new HashMap<>() ).get();
+		ij.command().run( CircleSkinner.class, true ).get();
 	}
 }
