@@ -1,8 +1,8 @@
 package net.imagej.circleskinner;
 
-import java.awt.Color;
 import java.io.IOException;
-import java.util.Collection;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 import org.scijava.ItemIO;
 import org.scijava.command.Command;
@@ -15,6 +15,7 @@ import org.scijava.ui.UIService;
 import ij.ImagePlus;
 import ij.gui.Overlay;
 import ij.gui.Roi;
+import ij.gui.TextRoi;
 import net.imagej.Dataset;
 import net.imagej.ImageJ;
 import net.imagej.ImgPlus;
@@ -22,17 +23,12 @@ import net.imagej.axis.Axes;
 import net.imagej.circleskinner.hough.HoughCircle;
 import net.imagej.circleskinner.hough.HoughDetectorOp;
 import net.imagej.circleskinner.hough.HoughTransformOp;
+import net.imagej.circleskinner.util.ColorMap;
 import net.imagej.ops.OpService;
 import net.imagej.ops.special.function.Functions;
 import net.imagej.ops.special.function.UnaryFunctionOp;
 import net.imglib2.IterableInterval;
-import net.imglib2.Localizable;
-import net.imglib2.Point;
-import net.imglib2.RandomAccess;
 import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.Sampler;
-import net.imglib2.algorithm.localextrema.LocalExtrema;
-import net.imglib2.algorithm.neighborhood.Neighborhood;
 import net.imglib2.img.Img;
 import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.type.logic.BitType;
@@ -41,6 +37,7 @@ import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.util.Util;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
+import scala.collection.immutable.HashMap;
 
 
 @Plugin( type = Command.class, menuPath = "Plugins > Circle skinner" )
@@ -73,17 +70,9 @@ public class CircleSkinner< T extends RealType< T > > implements Command
 	@Override
 	public void run()
 	{
-		final Color[] colors = new Color[]
-				{
-						Color.YELLOW,
-						Color.MAGENTA,
-						Color.CYAN,
-						Color.GREEN,
-				};
-
-
 		@SuppressWarnings( "unchecked" )
 		final ImgPlus< T > img = ( ImgPlus< T > ) source.getImgPlus();
+		final ImagePlus imp = ImageJFunctions.show( img, "Results" ); // DEBUG
 		// Find channel axis index.
 		int cId = -1;
 		for ( int d = 0; d < img.numDimensions(); d++ )
@@ -97,8 +86,8 @@ public class CircleSkinner< T extends RealType< T > > implements Command
 
 		if (cId < 0)
 		{
-			final Collection< HoughCircle > circles = processChannel( img.getImg() );
-			showCircles( circles, img, colors[ 0 ] );
+			final List< HoughCircle > circles = processChannel( img.getImg() );
+			showCircles( circles, imp, 0 );
 		}
 		else
 		{
@@ -106,21 +95,25 @@ public class CircleSkinner< T extends RealType< T > > implements Command
 			{
 				@SuppressWarnings( "unchecked" )
 				final IntervalView< T > channel = ( IntervalView< T > ) Views.hyperSlice( source.getImgPlus().getImg(), cId, c );
-				final Collection< HoughCircle > circles = processChannel( channel );
-				showCircles( circles, img, colors[ c ] );
-				break; // DEBUG
+				final List< HoughCircle > circles = processChannel( channel );
+				showCircles( circles, imp, c );
 			}
 		}
 
 	}
 
-	private void showCircles( final Collection< HoughCircle > circles, final ImgPlus< T > img, final Color color )
+	private void showCircles( final List< HoughCircle > circles, final ImagePlus imp, final int channel )
 	{
-		System.out.println( circles ); // DEBUG
+		Overlay overlay = imp.getOverlay();
+		if ( null == overlay )
+		{
+			overlay = new Overlay();
+			imp.setOverlay( overlay );
+		}
 
-		final ImagePlus imp = ImageJFunctions.show( img, "Hough circle detection" );
-		final Overlay overlay = new Overlay();
-		imp.setOverlay( overlay );
+		final ColorMap jet = ColorMap.jet();
+		final double max = circles.get( 0 ).getSensitivity();
+		final double min = circles.get( circles.size() - 1 ).getSensitivity();
 
 		for ( final HoughCircle circle : circles )
 		{
@@ -128,15 +121,24 @@ public class CircleSkinner< T extends RealType< T > > implements Command
 			final double y1 = circle.getDoublePosition( 1 ) - circle.getRadius();
 			final double diameter = 2. * circle.getRadius();
 			final Roi roi = new Roi( x1, y1, diameter, diameter );
-			roi.setStrokeColor( color );
+
+			final double alpha = ( circle.getSensitivity() - min ) / ( max - min );
+			roi.setStrokeColor( jet.get( alpha ) );
 			overlay.add( roi );
+
+			final TextRoi tr = new TextRoi(
+					circle.getDoublePosition( 0 ),
+					circle.getDoublePosition( 1 ),
+					String.format( "C=%d, Stivity=%.1f", channel, circle.getSensitivity() ) );
+			tr.setStrokeColor( jet.get( alpha ) );
+			overlay.add( tr );
 		}
 
 		imp.updateAndDraw();
 
 	}
 
-	private Collection< HoughCircle > processChannel( final RandomAccessibleInterval< T > channel )
+	private List< HoughCircle > processChannel( final RandomAccessibleInterval< T > channel )
 	{
 		final double sigma = circleThickness / 2. / Math.sqrt( channel.numDimensions() );
 
@@ -154,92 +156,43 @@ public class CircleSkinner< T extends RealType< T > > implements Command
 						channel, sigma, Util.getArrayFromValue( 1., channel.numDimensions() ) );
 		@SuppressWarnings( "unchecked" )
 		final Img< DoubleType > H = ( Img< DoubleType > ) tubenessOp.compute1( channel );
-//		uiService.show( "Tubeness", H ); // DEBUG
 
 		/*
 		 * Threshold with Otsu.
 		 */
 
 		final IterableInterval< BitType > thresholded = ops.threshold().otsu( H );
-//		uiService.show( "Thresholded", thresholded ); // DEBUG
 
 		/*
 		 * Hough transform
 		 */
 
-		System.out.print( "Computing Hough transform...." ); // DEBUG
 		@SuppressWarnings( "rawtypes" )
 		final UnaryFunctionOp< IterableInterval< BitType >, RandomAccessibleInterval > houghTransformOp =
 				Functions.unary( ops, HoughTransformOp.class, RandomAccessibleInterval.class,
 						thresholded, minRadius, maxRadius, stepRadius );
 		@SuppressWarnings( "unchecked" )
 		final Img< DoubleType > voteImg = ( Img< DoubleType > ) houghTransformOp.compute1( thresholded );
-//		uiService.show( "VoteImg", voteImg ); // DEBUG
-//		System.out.println( " Done." ); // DEBUG
 
 		/*
 		 * Detect maxima on vote image.
 		 */
 
 		@SuppressWarnings( "rawtypes" )
-		final UnaryFunctionOp< Img< DoubleType >, Collection > houghDetectOp =
-				Functions.unary( ops, HoughDetectorOp.class, Collection.class,
+		final UnaryFunctionOp< Img< DoubleType >, List > houghDetectOp =
+				Functions.unary( ops, HoughDetectorOp.class, List.class,
 						voteImg, circleThickness, minRadius, stepRadius, sensitivity );
 		@SuppressWarnings( "unchecked" )
-		final Collection< HoughCircle > circles = houghDetectOp.compute1( voteImg );
+		final List< HoughCircle > circles = houghDetectOp.compute1( voteImg );
 		return circles;
 	}
 
-	public static void main( final String[] args ) throws IOException
+	public static void main( final String[] args ) throws IOException, InterruptedException, ExecutionException
 	{
 		final ImageJ ij = new net.imagej.ImageJ();
 		ij.launch( args );
 		final Object dataset = ij.io().open( "samples/ca-01.lsm" );
 		ij.ui().show( dataset );
-	}
-
-	private static class MyLocalExtremaCheck implements LocalExtrema.LocalNeighborhoodCheck< Point, DoubleType >
-	{
-
-		private RandomAccess< DoubleType > reference;
-
-		private int minRadius;
-
-		private int stepRadius;
-
-		private double thickness;
-
-		private double sensitivity;
-
-		public MyLocalExtremaCheck( final RandomAccess< DoubleType > reference, final int minRadius, final int stepRadius, final double thickness, final double sensitivity )
-		{
-			this.minRadius = minRadius;
-			this.stepRadius = stepRadius;
-			this.reference = reference;
-			this.thickness = thickness;
-			this.sensitivity = sensitivity;
-		}
-
-		@Override
-		public < C extends Localizable & Sampler< DoubleType > > Point check( final C center, final Neighborhood< DoubleType > neighborhood )
-		{
-			// What radius is the center on?
-			final double i = center.getDoublePosition( center.numDimensions() - 1 );
-			// Determine sensible threshold, assuming that the center has been
-			// voted a certain number of times.
-			final double radius = minRadius + i * stepRadius;
-			final double threshold = 2. * Math.PI * radius * thickness / sensitivity;
-
-			reference.setPosition( center );
-			if ( reference.get().get() < threshold )
-				return null;
-
-			for ( final DoubleType d : neighborhood )
-				if ( d.compareTo( center.get() ) >= 0 )
-					return null;
-
-			return new Point( center );
-		}
-
+		ij.command().run( CircleSkinner.class, true, new HashMap<>() ).get();
 	}
 }
