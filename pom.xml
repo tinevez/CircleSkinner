@@ -3,9 +3,9 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<parent>
-		<groupId>sc.fiji</groupId>
-		<artifactId>pom-fiji</artifactId>
-		<version>26.1.1</version>
+		<groupId>org.scijava</groupId>
+		<artifactId>pom-scijava</artifactId>
+		<version>14.0.0</version>
 		<relativePath />
 	</parent>
 
@@ -14,7 +14,21 @@
 
 	<name>plugins/CircleSkinner_.jar</name>
 	<description>A Fiji plugin for the automated detection and quantification of circular structure in images.</description>
-
+	<url>https://github.com/tinevez/CircleSkinner</url>
+	<inceptionYear>2016</inceptionYear>
+	
+	<organization>
+		<name>tinevez</name>
+		<url>http://github.com/tinevez</url>
+	</organization>
+	
+	<licenses>
+		<license>
+			<name>not licensed yet</name>
+			<distribution>repo</distribution>
+		</license>
+	</licenses>
+	
 	<developers>
 		<developer>
 			<id>tinevez</id>
@@ -32,6 +46,23 @@
 		</developer>
 	</developers>
 
+	<contributors>
+		<contributor>
+			<name>None</name>
+		</contributor>
+	</contributors>
+
+	<ciManagement>
+		<system>None</system>
+	</ciManagement>
+	
+	<mailingLists>
+		<mailingList>
+			<name>ImageJ Forum</name>
+			<archive>http://forum.imagej.net/</archive>
+		</mailingList>
+	</mailingLists>
+	
 	<scm>
 		<connection>scm:git:git://github.com/tinevez/CircleSkinner</connection>
 		<developerConnection>scm:git:git@github.com:tinevez/CircleSkinner</developerConnection>
@@ -44,8 +75,10 @@
 	</issueManagement>
 
 	<properties>
-		<!-- Target Fiji dir for clean upload. -->
-		<imagej.app.directory>../Fiji.app/</imagej.app.directory>
+		<package-name>net.imagej.circleskinner</package-name>
+		<main-class>net.imagej.circleskinner.CircleSkinner</main-class>
+		<license.licenseName>bsd_2</license.licenseName>
+		<license.copyrightOwners>My Company, Inc.</license.copyrightOwners>
 	</properties>
 
 	<repositories>
