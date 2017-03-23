@@ -55,4 +55,21 @@ public class HoughCircle extends RealPoint implements Comparable< HoughCircle >
 	{
 		return sensitivity < o.sensitivity ? -1 : sensitivity > o.sensitivity ? +1 : 0;
 	}
+
+	public boolean contains( final RealLocalizable point )
+	{
+		final double dx = getDoublePosition( 0 ) - point.getDoublePosition( 0 );
+		final double dy = getDoublePosition( 1 ) - point.getDoublePosition( 1 );
+		final double dr2 = dx * dx + dy * dy;
+
+		final double radMin = radius - thickness / 2.;
+		if ( dr2 < radMin * radMin )
+			return false;
+
+		final double radMax = radius + thickness / 2.;
+		if ( dr2 > radMax * radMax )
+			return false;
+
+		return true;
+	}
 }
