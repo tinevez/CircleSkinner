@@ -79,7 +79,7 @@ public class HoughDetectorOp< T extends RealType< T > & NativeType< T > >
 
 			final double radius = minRadius + ( peak.getDoublePosition( numDimensions - 1 ) ) * stepRadius;
 			final double ls = -2. * Math.PI * minRadius * circleThickness / peak.getValue();
-			circles.add( new HoughCircle( center, radius, ls ) );
+			circles.add( new HoughCircle( center, radius, circleThickness, ls ) );
 		}
 
 		Collections.sort( circles );

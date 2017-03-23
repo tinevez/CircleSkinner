@@ -66,13 +66,22 @@ public class HoughCircleOverlay extends Roi
 				final double alpha = ( circle.getSensitivity() - min ) / ( max - min );
 				g.setColor( CM.get( 1. - alpha ) );
 
-				final double x = circle.getDoublePosition( 0 ) - xcorner;
-				final double y = circle.getDoublePosition( 1 ) - ycorner;
+				final double x = circle.getDoublePosition( 0 ) - xcorner + 0.5;
+				final double y = circle.getDoublePosition( 1 ) - ycorner + 0.5;
 				g2d.translate( x, y );
-				final double w = 2. * circle.getRadius();
-				final double h = w;
-				final Ellipse2D ellipse2 = new Ellipse2D.Double( -w / 2., -h / 2., w, h );
+
+				final double thickness = circle.getThickness();
+
+				final double w1 = 2. * circle.getRadius() + thickness;
+				final double h1 = w1;
+				final Ellipse2D ellipse1 = new Ellipse2D.Double( -w1 / 2., -h1 / 2., w1, h1 );
+				g2d.draw( ellipse1 );
+
+				final double w2 = 2. * circle.getRadius() - thickness;
+				final double h2 = w2;
+				final Ellipse2D ellipse2 = new Ellipse2D.Double( -w2 / 2., -h2 / 2., w2, h2 );
 				g2d.draw( ellipse2 );
+
 				g2d.translate( -x, -y );
 			}
 		}

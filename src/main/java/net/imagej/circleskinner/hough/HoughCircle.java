@@ -8,12 +8,15 @@ public class HoughCircle extends RealPoint implements Comparable< HoughCircle >
 
 	private final double radius;
 
+	private final double thickness;
+
 	private final double sensitivity;
 
-	public HoughCircle( final RealLocalizable pos, final double radius, final double sensitivity )
+	public HoughCircle( final RealLocalizable pos, final double radius, final double thickness, final double sensitivity )
 	{
 		super( pos );
 		this.radius = radius;
+		this.thickness = thickness;
 		this.sensitivity = sensitivity;
 	}
 
@@ -29,12 +32,17 @@ public class HoughCircle extends RealPoint implements Comparable< HoughCircle >
 			c = ',';
 		}
 		sb.append( ")" );
-		return String.format( "%s\tR=%.1f\tSensitivity=%.1f", sb.toString(), radius, sensitivity );
+		return String.format( "%s\tR=%.1f\t±\t %.1f\tSensitivity=%.1f", sb.toString(), radius, thickness / 2., sensitivity );
 	}
 
 	public double getRadius()
 	{
 		return radius;
+	}
+
+	public double getThickness()
+	{
+		return thickness;
 	}
 
 	public double getSensitivity()
