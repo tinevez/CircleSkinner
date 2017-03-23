@@ -45,7 +45,7 @@ public class HoughDetectorOp< T extends RealType< T > & NativeType< T > >
 	protected RandomAccessibleInterval< T > out;
 
 	@Override
-	public List< HoughCircle > compute1( final RandomAccessibleInterval< T > input )
+	public List< HoughCircle > calculate( final RandomAccessibleInterval< T > input )
 	{
 		final int numDimensions = input.numDimensions();
 		final ExecutorService es = threadService.getExecutorService();

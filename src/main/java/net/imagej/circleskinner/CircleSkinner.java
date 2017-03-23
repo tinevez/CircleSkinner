@@ -24,7 +24,6 @@ import net.imagej.circleskinner.hough.HoughTransformOp;
 import net.imagej.circleskinner.util.HoughCircleOverlay;
 import net.imagej.ops.OpService;
 import net.imagej.ops.special.function.Functions;
-import net.imagej.ops.special.function.UnaryFunctionOp;
 import net.imglib2.IterableInterval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.Img;
@@ -122,11 +121,11 @@ public class CircleSkinner< T extends RealType< T > > implements Command
 		 */
 
 		@SuppressWarnings( "rawtypes" )
-		final UnaryFunctionOp< RandomAccessibleInterval< T >, RandomAccessibleInterval > tubenessOp =
-				Functions.unary( ops, TubenessOp.class, RandomAccessibleInterval.class,
+		final TubenessOp tubenessOp =
+				( TubenessOp ) Functions.unary( ops, TubenessOp.class, RandomAccessibleInterval.class,
 						channel, sigma, Util.getArrayFromValue( 1., channel.numDimensions() ) );
 		@SuppressWarnings( "unchecked" )
-		final Img< DoubleType > H = ( Img< DoubleType > ) tubenessOp.compute1( channel );
+		final Img< DoubleType > H = tubenessOp.calculate( channel );
 
 		/*
 		 * Threshold with Otsu.
@@ -138,23 +137,22 @@ public class CircleSkinner< T extends RealType< T > > implements Command
 		 * Hough transform
 		 */
 
-		@SuppressWarnings( "rawtypes" )
-		final UnaryFunctionOp< IterableInterval< BitType >, RandomAccessibleInterval > houghTransformOp =
-				Functions.unary( ops, HoughTransformOp.class, RandomAccessibleInterval.class,
+		@SuppressWarnings( { "unchecked", "rawtypes" } )
+		final HoughTransformOp< BitType > houghTransformOp =
+				( HoughTransformOp ) Functions.unary( ops, HoughTransformOp.class, RandomAccessibleInterval.class,
 						thresholded, minRadius, maxRadius, stepRadius );
-		@SuppressWarnings( "unchecked" )
-		final Img< DoubleType > voteImg = ( Img< DoubleType > ) houghTransformOp.compute1( thresholded );
+		final Img< DoubleType > voteImg = houghTransformOp.calculate( thresholded );
 
 		/*
 		 * Detect maxima on vote image.
 		 */
 
 		@SuppressWarnings( "rawtypes" )
-		final UnaryFunctionOp< Img< DoubleType >, List > houghDetectOp =
-				Functions.unary( ops, HoughDetectorOp.class, List.class,
+		final HoughDetectorOp houghDetectOp =
+				( HoughDetectorOp ) Functions.unary( ops, HoughDetectorOp.class, List.class,
 						voteImg, circleThickness, minRadius, stepRadius, sensitivity );
 		@SuppressWarnings( "unchecked" )
-		final List< HoughCircle > circles = houghDetectOp.compute1( voteImg );
+		final List< HoughCircle > circles = houghDetectOp.calculate( voteImg );
 		return circles;
 	}
 

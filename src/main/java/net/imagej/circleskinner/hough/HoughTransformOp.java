@@ -32,7 +32,7 @@ public class HoughTransformOp< T extends BooleanType< T > >
 	private int stepRadius = 2;
 
 	@Override
-	public Img< DoubleType > compute1( final IterableInterval< T > input )
+	public Img< DoubleType > calculate( final IterableInterval< T > input )
 	{
 		final int numDimensions = input.numDimensions();
 

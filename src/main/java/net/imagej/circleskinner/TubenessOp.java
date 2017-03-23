@@ -44,7 +44,7 @@ public class TubenessOp< T extends RealType< T > >
 	private double[] calibration;
 
 	@Override
-	public Img< DoubleType > compute1( final RandomAccessibleInterval< T > input )
+	public Img< DoubleType > calculate( final RandomAccessibleInterval< T > input )
 	{
 		
 		final int numDimensions = input.numDimensions();
@@ -121,7 +121,7 @@ public class TubenessOp< T extends RealType< T > >
 		}
 
 		@Override
-		public void compute1( final Iterable< DoubleType > input, final DoubleType output )
+		public void compute( final Iterable< DoubleType > input, final DoubleType output )
 		{
 			// Use just the largest one.
 			final Iterator< DoubleType > it = input.iterator();
@@ -146,7 +146,7 @@ public class TubenessOp< T extends RealType< T > >
 		}
 
 		@Override
-		public void compute1( final Iterable< DoubleType > input, final DoubleType output )
+		public void compute( final Iterable< DoubleType > input, final DoubleType output )
 		{
 			// Use the two largest ones.
 			final Iterator< DoubleType > it = input.iterator();
