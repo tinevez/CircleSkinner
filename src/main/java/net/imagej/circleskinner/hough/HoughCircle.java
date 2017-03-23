@@ -12,6 +12,8 @@ public class HoughCircle extends RealPoint implements Comparable< HoughCircle >
 
 	private final double sensitivity;
 
+	private Stats stats;
+
 	public HoughCircle( final RealLocalizable pos, final double radius, final double thickness, final double sensitivity )
 	{
 		super( pos );
@@ -71,5 +73,42 @@ public class HoughCircle extends RealPoint implements Comparable< HoughCircle >
 			return false;
 
 		return true;
+	}
+
+	public double area()
+	{
+		final double radMin = radius - thickness / 2.;
+		final double radMax = radius + thickness / 2.;
+		return Math.PI * ( radMax * radMax - radMin * radMin );
+	}
+
+	public void setStats( final double mean, final double std, final int N, final double median )
+	{
+		this.stats = new Stats( mean, std, N, median );
+	}
+
+	public Stats getStats()
+	{
+		return stats;
+	}
+
+	public static final class Stats
+	{
+
+		public final double mean;
+
+		public final double std;
+
+		public final int N;
+
+		public final double median;
+
+		public Stats( final double mean, final double std, final int n, final double median )
+		{
+			this.mean = mean;
+			this.std = std;
+			this.N = n;
+			this.median = median;
+		}
 	}
 }
