@@ -3,6 +3,7 @@ package net.imagej.circleskinner;
 import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
 
+import org.scijava.app.StatusService;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 import org.scijava.thread.ThreadService;
@@ -30,6 +31,8 @@ public class TubenessOp< T extends RealType< T > >
 	@Parameter
 	private ThreadService threadService;
 	
+	@Parameter
+	private StatusService statusService;
 
 	/**
 	 * Desired scale in sigma in physical units.
@@ -80,11 +83,15 @@ public class TubenessOp< T extends RealType< T > >
 					factory, new DoubleType(), 
 					nThreads, es );
 
+			statusService.showProgress( 1, 3 );
+
 			// Hessian eigenvalues.
 			final Img< DoubleType > evs = TensorEigenValues.calculateEigenValuesSymmetric(
 					hessian,
 					factory, new DoubleType(),
 					nThreads, es );
+
+			statusService.showProgress( 2, 3 );
 
 			// Tubeness is derived from largest eigenvalues.
 			final Img< DoubleType > tubeness = ops().create().img( input, new DoubleType() );
@@ -101,6 +108,9 @@ public class TubenessOp< T extends RealType< T > >
 				return null;
 			}
 			ops().transform().project( tubeness, evs, method, numDimensions );
+
+			statusService.showProgress( 3, 3 );
+
 			return tubeness;
 		}
 		catch ( final IncompatibleTypeException e )

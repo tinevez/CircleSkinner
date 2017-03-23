@@ -5,8 +5,8 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 
 import org.scijava.ItemIO;
+import org.scijava.app.StatusService;
 import org.scijava.command.Command;
-import org.scijava.log.LogService;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 import org.scijava.thread.ThreadService;
@@ -49,10 +49,10 @@ public class CircleSkinner< T extends RealType< T > > implements Command
 	private OpService ops;
 
 	@Parameter
-	private LogService log;
+	private ThreadService threadService;
 
 	@Parameter
-	private ThreadService threadService;
+	private StatusService statusService;
 
 	/**
 	 * The circle thickness (crown thickness), in pixel units.
@@ -120,22 +120,27 @@ public class CircleSkinner< T extends RealType< T > > implements Command
 		 * Filter using tubeness.
 		 */
 
-		@SuppressWarnings( "rawtypes" )
-		final TubenessOp tubenessOp =
+		statusService.showStatus( "Filtering..." );
+
+		@SuppressWarnings( { "rawtypes", "unchecked" } )
+		final TubenessOp< T > tubenessOp =
 				( TubenessOp ) Functions.unary( ops, TubenessOp.class, RandomAccessibleInterval.class,
 						channel, sigma, Util.getArrayFromValue( 1., channel.numDimensions() ) );
-		@SuppressWarnings( "unchecked" )
 		final Img< DoubleType > H = tubenessOp.calculate( channel );
 
 		/*
 		 * Threshold with Otsu.
 		 */
 
+		statusService.showStatus( "Thresholding..." );
+
 		final IterableInterval< BitType > thresholded = ops.threshold().otsu( H );
 
 		/*
 		 * Hough transform
 		 */
+
+		statusService.showStatus( "Computing Hough transform..." );
 
 		@SuppressWarnings( { "unchecked", "rawtypes" } )
 		final HoughTransformOp< BitType > houghTransformOp =
@@ -146,6 +151,8 @@ public class CircleSkinner< T extends RealType< T > > implements Command
 		/*
 		 * Detect maxima on vote image.
 		 */
+
+		statusService.showStatus( "Detecting circles..." );
 
 		@SuppressWarnings( "rawtypes" )
 		final HoughDetectorOp houghDetectOp =

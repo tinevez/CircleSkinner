@@ -1,5 +1,6 @@
 package net.imagej.circleskinner.hough;
 
+import org.scijava.app.StatusService;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 
@@ -21,6 +22,9 @@ import net.imglib2.view.Views;
 public class HoughTransformOp< T extends BooleanType< T > >
 		extends AbstractUnaryFunctionOp< IterableInterval< T >, Img< DoubleType > >
 {
+
+	@Parameter
+	private StatusService statusService;
 
 	@Parameter( min = "1" )
 	private int minRadius = 1;
@@ -59,6 +63,9 @@ public class HoughTransformOp< T extends BooleanType< T > >
 		 * Hough transform.
 		 */
 
+		final double sum = ops().stats().sum( input ).getRealDouble();
+		int progress = 0;
+
 		final Cursor< T > cursor = input.localizingCursor();
 		while ( cursor.hasNext() )
 		{
@@ -73,6 +80,8 @@ public class HoughTransformOp< T extends BooleanType< T > >
 				final int r = minRadius + i * stepRadius;
 				midPointAlgorithm( cursor, r, ra );
 			}
+
+			statusService.showProgress( ++progress, ( int ) sum );
 		}
 
 		return votes;
