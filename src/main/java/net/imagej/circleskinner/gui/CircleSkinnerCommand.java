@@ -17,6 +17,7 @@ import org.scijava.widget.Button;
 import org.scijava.widget.ChoiceWidget;
 import org.scijava.widget.FileWidget;
 
+import ij.IJ;
 import ij.ImagePlus;
 import ij.gui.Overlay;
 import io.scif.FormatException;
@@ -34,6 +35,8 @@ import net.imagej.ops.OpService;
 import net.imagej.ops.special.computer.Computers;
 import net.imagej.table.DefaultGenericTable;
 import net.imagej.table.GenericTable;
+import net.imglib2.img.Img;
+import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.type.numeric.RealType;
 
 @Plugin( type = Command.class, menuPath = "Plugins > Circle Skinner GUI" )
@@ -41,6 +44,7 @@ public class CircleSkinnerCommand< T extends RealType< T > > implements Command
 {
 	private static final String CHOICE1 = "Current image";
 	private static final String CHOICE2 = "Folder";
+	private static final String PNG_OUTPUT_FOLDER = "PNGs";
 
 	/*
 	 * SERVICES.
@@ -86,7 +90,7 @@ public class CircleSkinnerCommand< T extends RealType< T > > implements Command
 	@Parameter( label = "Threshold adjustment", min = "0", max = "100", type = ItemIO.INPUT )
 	private double thresholdFactor = 10.;
 
-	@Parameter( label = "Circle detection sensitivity", min = "1", type = ItemIO.INPUT )
+	@Parameter( label = "Circle detection sensitivity", min = "1" )
 	private double sensitivity = 100.;
 
 	@Parameter( label = "<html><b>Target:</b></html>", visibility = ItemVisibility.MESSAGE, persist = false )
@@ -96,11 +100,17 @@ public class CircleSkinnerCommand< T extends RealType< T > > implements Command
 			style = ChoiceWidget.RADIO_BUTTON_VERTICAL_STYLE, choices = { CHOICE1, CHOICE2 }, callback = "targetChanged" )
 	private String analysisTarget = CHOICE1;
 
-	@Parameter( label = "Folder for batch processing", type = ItemIO.INPUT, required = false, style = FileWidget.DIRECTORY_STYLE, callback = "folderChanged" )
+	@Parameter( label = "Folder for batch processing", type = ItemIO.INPUT,
+			required = false, style = FileWidget.DIRECTORY_STYLE, callback = "folderChanged" )
 	private File folder;
 
 	@Parameter( visibility = ItemVisibility.MESSAGE, persist = false )
 	private String infoFiles = " ";
+
+	@Parameter( label = "Save PNG snapshot?", description = "If true, then a PNG capture of the color "
+			+ "image plus an overlay showing detected circles will be saved in a subolder if the input folder.",
+			required = false, type = ItemIO.INPUT )
+	private boolean saveSnapshot = false;
 
 	@Parameter( label = "<html><b>Manual adjustments:</b></html>", visibility = ItemVisibility.MESSAGE, persist = false )
 	private String headerAdjustments = " ";
@@ -153,13 +163,47 @@ public class CircleSkinnerCommand< T extends RealType< T > > implements Command
 		}
 	}
 
-	private void processFolder( final File targetFolder, final GenericTable resultsTable )
+	@SuppressWarnings( "unchecked" )
+	private void processFolder( final File sourceFolder, final GenericTable resultsTable )
 	{
-		if ( targetFolder == null || !targetFolder.exists() || !targetFolder.isDirectory() )
+		/*
+		 * Inspect source folder.
+		 */
+
+		if ( sourceFolder == null || !sourceFolder.exists() || !sourceFolder.isDirectory() )
 		{
-			statusService.showStatus( "Invalid folder: " + targetFolder );
+			statusService.showStatus( "Invalid folder: " + sourceFolder );
 			return;
 		}
+
+		/*
+		 * Build target folder for PNG export.
+		 */
+
+		String saveFolder = sourceFolder.getAbsolutePath();
+		if (saveSnapshot)
+		{
+			final File sf = new File( sourceFolder, PNG_OUTPUT_FOLDER );
+			if ( sf.exists() && !sf.isDirectory() )
+			{
+				log.warn( "Cannot ouput PNG shapshots. A file name " + sf.getAbsolutePath() + " exists in input folder." );
+				saveSnapshot = false;
+			}
+			else if ( !sf.exists() )
+			{
+				final boolean mkdirs = sf.mkdirs();
+				if ( !mkdirs )
+				{
+					log.warn( "Cannot ouput PNG shapshots. Could not create folder " + sf.getAbsolutePath() + "." );
+					saveSnapshot = false;
+				}
+			}
+			saveFolder = sf.getAbsolutePath();
+		}
+
+		/*
+		 * Process file be file.
+		 */
 
 		final File[] files = folder.listFiles();
 		int nImages = 0;
@@ -179,7 +223,20 @@ public class CircleSkinnerCommand< T extends RealType< T > > implements Command
 			try
 			{
 				final Dataset dataset = datasetIOService.open( file.getAbsolutePath() );
-				processImage( dataset, resultsTable, null );
+				ImagePlus imp = null;
+				if ( saveSnapshot )
+				{
+					imp = ImageJFunctions.show( ( Img< T > ) dataset.getImgPlus(), dataset.getName() );
+					imp.show();
+				}
+
+				processImage( dataset, resultsTable, imp );
+
+				if ( saveSnapshot )
+				{
+					final String name = dataset.getName().substring( 0, dataset.getName().lastIndexOf( '.' ) ) + ".png";
+					IJ.save( imp, new File( saveFolder, name ).getAbsolutePath() );
+				}
 			}
 			catch ( final IOException e )
 			{
