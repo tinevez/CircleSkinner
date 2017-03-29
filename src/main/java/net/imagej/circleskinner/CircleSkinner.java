@@ -1,22 +1,17 @@
 package net.imagej.circleskinner;
 
-import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
+import java.util.Map;
 
 import org.scijava.ItemIO;
 import org.scijava.app.StatusService;
-import org.scijava.command.Command;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 import org.scijava.thread.ThreadService;
 import org.scijava.ui.UIService;
 
-import ij.ImagePlus;
-import ij.gui.Overlay;
-import ij.measure.ResultsTable;
 import net.imagej.Dataset;
-import net.imagej.ImageJ;
 import net.imagej.ImgPlus;
 import net.imagej.axis.Axes;
 import net.imagej.circleskinner.analyze.CircleAnalyzerOp;
@@ -24,14 +19,18 @@ import net.imagej.circleskinner.hough.HoughCircle;
 import net.imagej.circleskinner.hough.HoughCircle.Stats;
 import net.imagej.circleskinner.hough.HoughDetectorOp;
 import net.imagej.circleskinner.hough.HoughTransformOp;
-import net.imagej.circleskinner.util.HoughCircleOverlay;
 import net.imagej.ops.OpService;
+import net.imagej.ops.special.computer.AbstractUnaryComputerOp;
 import net.imagej.ops.special.function.Functions;
 import net.imagej.ops.special.inplace.Inplaces;
+import net.imagej.table.DefaultGenericTable;
+import net.imagej.table.DoubleColumn;
+import net.imagej.table.GenericColumn;
+import net.imagej.table.GenericTable;
+import net.imagej.table.IntColumn;
 import net.imglib2.IterableInterval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.Img;
-import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.type.logic.BitType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.DoubleType;
@@ -39,9 +38,8 @@ import net.imglib2.util.Util;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 
-
-@Plugin( type = Command.class, menuPath = "Plugins > Circle skinner" )
-public class CircleSkinner< T extends RealType< T > > implements Command
+@Plugin( type = CircleSkinner.class )
+public class CircleSkinner< T extends RealType< T > > extends AbstractUnaryComputerOp< Dataset, GenericTable >
 {
 	private static final String SOURCE_NAME_COLUMN = "Image";
 	private static final String CHANEL_COLUMN = "Channel";
@@ -56,8 +54,9 @@ public class CircleSkinner< T extends RealType< T > > implements Command
 	private static final String CIRCLE_N_COLUMN = "N";
 	private static final String CIRCLE_MEDIAN_COLUMN = "Median";
 
-	@Parameter
-	private Dataset source;
+	/*
+	 * SERVICES.
+	 */
 
 	@Parameter
 	private UIService uiService;
@@ -71,34 +70,66 @@ public class CircleSkinner< T extends RealType< T > > implements Command
 	@Parameter
 	private StatusService statusService;
 
+	/*
+	 * INPUT PARAMETERS.
+	 */
+
 	/**
 	 * The circle thickness (crown thickness), in pixel units.
 	 */
 	@Parameter( label = "Circle thickness", min = "1", type = ItemIO.INPUT )
 	private double circleThickness = 4.;
 
+	@Parameter( label = "Threshold adjustment", min = "1", type = ItemIO.INPUT, description = "By how much (in percent) to adjust the automatic Otsu threshold after segmentation of the filtered image." )
+	private double thresholdFactor = 100.;
+
 	@Parameter( label = "Circle detection sensitivity", min = "1", type = ItemIO.INPUT )
 	private double sensitivity = 10.;
 
+	/*
+	 * OUTPUT PARAMETERS.
+	 */
+
+	@Parameter( label = "Detected circles", type = ItemIO.OUTPUT, description = "The map of detected circles per channel in the source image." )
+	private Map< Integer, List< HoughCircle > > circles;
+
+	/*
+	 * METHODS.
+	 */
+
+	public Map< Integer, List< HoughCircle > > getCircles()
+	{
+		return circles;
+	}
+
+	public static final DefaultGenericTable createResulsTable()
+	{
+		final DefaultGenericTable table = new DefaultGenericTable();
+		table.add( new GenericColumn( SOURCE_NAME_COLUMN ) );
+		table.add( new IntColumn( CHANEL_COLUMN ) );
+		table.add( new IntColumn( CIRCLE_ID_COLUMN ) );
+		table.add( new DoubleColumn( CIRCLE_X_COLUMN ) );
+		table.add( new DoubleColumn( CIRCLE_Y_COLUMN ) );
+		table.add( new DoubleColumn( CIRCLE_RADIUS_COLUMN ) );
+		table.add( new DoubleColumn( CIRCLE_THICKNESS_COLUMN ) );
+		table.add( new DoubleColumn( CIRCLE_SENSITIVITY_COLUMN ) );
+		table.add( new DoubleColumn( CIRCLE_MEAN_COLUMN ) );
+		table.add( new DoubleColumn( CIRCLE_STD_COLUMN ) );
+		table.add( new IntColumn( CIRCLE_N_COLUMN ) );
+		table.add( new DoubleColumn( CIRCLE_MEDIAN_COLUMN ) );
+		return table;
+	}
 
 	@Override
-	public void run()
+	public void compute( final Dataset source, GenericTable table )
 	{
+		if ( null == table )
+			table = createResulsTable();
+
+		circles = new HashMap<>();
+
 		@SuppressWarnings( "unchecked" )
 		final ImgPlus< T > img = ( ImgPlus< T > ) source.getImgPlus();
-
-		final ImagePlus imp = ImageJFunctions.show( img, "Results" );
-		Overlay overlay = imp.getOverlay();
-		if ( null == overlay )
-		{
-			overlay = new Overlay();
-			imp.setOverlay( overlay );
-		}
-		final HoughCircleOverlay circleOverlay = new HoughCircleOverlay( imp );
-		overlay.add( circleOverlay, "Hough circles" );
-
-		// Prepare results table.
-		final ResultsTable table = new ResultsTable();
 
 		// Find channel axis index.
 		int cId = -1;
@@ -114,9 +145,9 @@ public class CircleSkinner< T extends RealType< T > > implements Command
 		// Process each channel.
 		if (cId < 0)
 		{
-			final List< HoughCircle > circles = processChannel( img.getImg() );
-			circleOverlay.setCircles( circles, 0 );
-			appendResults( circles, table, 1 );
+			final List< HoughCircle > circ = processChannel( img.getImg() );
+			circles.put( Integer.valueOf( 0 ), circ );
+			appendResults( circ, table, source.getName(), 1 );
 		}
 		else
 		{
@@ -124,43 +155,60 @@ public class CircleSkinner< T extends RealType< T > > implements Command
 			{
 				@SuppressWarnings( "unchecked" )
 				final IntervalView< T > channel = ( IntervalView< T > ) Views.hyperSlice( source.getImgPlus().getImg(), cId, c );
-				final List< HoughCircle > circles = processChannel( channel );
-				circleOverlay.setCircles( circles, c );
-				appendResults( circles, table, c + 1 );
+				final List< HoughCircle > circ = processChannel( channel );
+				circles.put( Integer.valueOf( c ), circ );
+				appendResults( circ, table, source.getName(), c + 1 );
 			}
 		}
-
-		table.show( "Circle statistics for " + source.getName() );
 	}
 
-	private void appendResults( final List< HoughCircle > circles, final ResultsTable table, final int channelNumber )
+	private void appendResults( final List< HoughCircle > circles, final GenericTable table, final String name, final int channelNumber )
 	{
 		int circleId = 0;
+
+		final GenericColumn nameColumn = ( GenericColumn ) table.get( SOURCE_NAME_COLUMN );
+		final IntColumn channelColumn = ( IntColumn ) table.get( CHANEL_COLUMN );
+		final IntColumn circleIdColumn = ( IntColumn ) table.get( CIRCLE_ID_COLUMN );
+		final DoubleColumn circleXColumn = ( DoubleColumn ) table.get( CIRCLE_X_COLUMN );
+		final DoubleColumn circleYColumn = ( DoubleColumn ) table.get( CIRCLE_Y_COLUMN );
+		final DoubleColumn circleRadiusColumn = ( DoubleColumn ) table.get( CIRCLE_RADIUS_COLUMN );
+		final DoubleColumn circleThicknessColumn = ( DoubleColumn ) table.get( CIRCLE_THICKNESS_COLUMN );
+		final DoubleColumn circleSensitivityColumn = ( DoubleColumn ) table.get( CIRCLE_SENSITIVITY_COLUMN );
+		final DoubleColumn circleMeanColumn = ( DoubleColumn ) table.get( CIRCLE_MEAN_COLUMN );
+		final DoubleColumn circleStdColumn = ( DoubleColumn ) table.get( CIRCLE_STD_COLUMN );
+		final IntColumn circleNColumn = ( IntColumn ) table.get( CIRCLE_N_COLUMN );
+		final DoubleColumn circleMedianColumn = ( DoubleColumn ) table.get( CIRCLE_MEDIAN_COLUMN );
+
+		final int rowCount = table.getRowCount();
 		for ( final HoughCircle circle : circles )
 		{
-			table.incrementCounter();
+			nameColumn.add( name );
+			channelColumn.add( channelNumber );
 
-			table.addValue( CHANEL_COLUMN, channelNumber );
-			table.addValue( SOURCE_NAME_COLUMN, source.getName() );
-
-			table.addValue( CIRCLE_ID_COLUMN, ++circleId );
-			table.addValue( CIRCLE_X_COLUMN, circle.getDoublePosition( 0 ) );
-			table.addValue( CIRCLE_Y_COLUMN, circle.getDoublePosition( 1 ) );
-			table.addValue( CIRCLE_RADIUS_COLUMN, circle.getRadius() );
-			table.addValue( CIRCLE_THICKNESS_COLUMN, circle.getThickness() );
-			table.addValue( CIRCLE_SENSITIVITY_COLUMN, circle.getSensitivity() );
+			circleIdColumn.add( ++circleId );
+			circleXColumn.add( circle.getDoublePosition( 0 ) );
+			circleYColumn.add( circle.getDoublePosition( 1 ) );
+			circleRadiusColumn.add( circle.getRadius() );
+			circleThicknessColumn.add( circle.getThickness() );
+			circleSensitivityColumn.add( circle.getSensitivity() );
 
 			final Stats stats = circle.getStats();
 			if (null == stats)
-				continue;
-
-			table.addValue( CIRCLE_MEAN_COLUMN, stats.mean );
-			table.addValue( CIRCLE_STD_COLUMN, stats.std );
-			table.addValue( CIRCLE_N_COLUMN, stats.N );
-			table.addValue( CIRCLE_MEDIAN_COLUMN, stats.median );
-
+			{
+				circleMeanColumn.add( Double.NaN );
+				circleStdColumn.add( Double.NaN );
+				circleNColumn.add( null );
+				circleMedianColumn.add( Double.NaN );
+			}
+			else
+			{
+				circleMeanColumn.add( stats.mean );
+				circleStdColumn.add( stats.std );
+				circleNColumn.add( stats.N );
+				circleMedianColumn.add( stats.median );
+			}
 		}
-
+		table.setRowCount( rowCount + circles.size() );
 	}
 
 	private List< HoughCircle > processChannel( final RandomAccessibleInterval< T > channel )
@@ -209,11 +257,10 @@ public class CircleSkinner< T extends RealType< T > > implements Command
 
 		statusService.showStatus( "Detecting circles..." );
 
-		@SuppressWarnings( "rawtypes" )
-		final HoughDetectorOp houghDetectOp =
+		@SuppressWarnings( { "rawtypes", "unchecked" } )
+		final HoughDetectorOp< DoubleType > houghDetectOp =
 				( HoughDetectorOp ) Functions.unary( ops, HoughDetectorOp.class, List.class,
 						voteImg, circleThickness, minRadius, stepRadius, sensitivity );
-		@SuppressWarnings( "unchecked" )
 		final List< HoughCircle > circles = houghDetectOp.calculate( voteImg );
 
 		/*
@@ -226,14 +273,5 @@ public class CircleSkinner< T extends RealType< T > > implements Command
 		circleAnalyzerOp.run();
 
 		return circles;
-	}
-
-	public static void main( final String[] args ) throws IOException, InterruptedException, ExecutionException
-	{
-		final ImageJ ij = new net.imagej.ImageJ();
-		ij.launch( args );
-		final Object dataset = ij.io().open( "samples/ca-01.lsm" );
-		ij.ui().show( dataset );
-		ij.command().run( CircleSkinner.class, true ).get();
 	}
 }

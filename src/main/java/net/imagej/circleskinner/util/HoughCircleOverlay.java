@@ -41,6 +41,12 @@ public class HoughCircleOverlay extends Roi
 		imp.updateAndDraw();
 	}
 	
+	public void setCircles( final Map< Integer, List< HoughCircle > > circles )
+	{
+		circleMap.putAll( circles );
+		imp.updateAndDraw();
+	}
+
 	@Override
 	public void drawOverlay( final Graphics g )
 	{
@@ -88,5 +94,4 @@ public class HoughCircleOverlay extends Roi
 
 		g2d.setTransform( transform );
 	}
-
 }
