@@ -78,13 +78,22 @@ public class CircleSkinner< T extends RealType< T > > extends AbstractUnaryCompu
 	 * The circle thickness (crown thickness), in pixel units.
 	 */
 	@Parameter( label = "Circle thickness", min = "1", type = ItemIO.INPUT )
-	private double circleThickness = 4.;
+	private double circleThickness = 9.;
 
 	@Parameter( label = "Threshold adjustment", min = "1", type = ItemIO.INPUT, description = "By how much (in percent) to adjust the automatic Otsu threshold after segmentation of the filtered image." )
 	private double thresholdFactor = 100.;
 
 	@Parameter( label = "Circle detection sensitivity", min = "1", type = ItemIO.INPUT )
-	private double sensitivity = 10.;
+	private double sensitivity = 100.;
+
+	@Parameter( label = "Min circle radius (pixels)", min = "1", type = ItemIO.INPUT )
+	private double minRadius = 50.;
+
+	@Parameter( label = "Max circle radius (pixels)", min = "1", type = ItemIO.INPUT )
+	private double maxRadius = 100.;
+
+	@Parameter( label = "Radius step (pixels)", min = "1", type = ItemIO.INPUT )
+	private double stepRadius = 2.;
 
 	/*
 	 * OUTPUT PARAMETERS.
@@ -214,10 +223,6 @@ public class CircleSkinner< T extends RealType< T > > extends AbstractUnaryCompu
 	private List< HoughCircle > processChannel( final RandomAccessibleInterval< T > channel )
 	{
 		final double sigma = circleThickness / 2. / Math.sqrt( channel.numDimensions() );
-
-		final double minRadius = 50.;
-		final double maxRadius = 100.;
-		final double stepRadius = 2.;
 
 		/*
 		 * Filter using tubeness.

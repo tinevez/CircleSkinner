@@ -93,6 +93,15 @@ public class CircleSkinnerCommand< T extends RealType< T > > implements Command
 	@Parameter( label = "Circle detection sensitivity", min = "1" )
 	private double sensitivity = 100.;
 
+	@Parameter( label = "Min circle radius (pixels)", min = "1", type = ItemIO.INPUT )
+	private double minRadius = 50.;
+
+	@Parameter( label = "Max circle radius (pixels)", min = "1", type = ItemIO.INPUT )
+	private double maxRadius = 100.;
+
+	@Parameter( label = "Radius step (pixels)", min = "1", type = ItemIO.INPUT )
+	private double stepRadius = 2.;
+
 	@Parameter( label = "<html><b>Target:</b></html>", visibility = ItemVisibility.MESSAGE, persist = false )
 	private String headerTarget = " ";
 
@@ -256,7 +265,7 @@ public class CircleSkinnerCommand< T extends RealType< T > > implements Command
 	{
 		@SuppressWarnings( "unchecked" )
 		final CircleSkinner< T > circleSkinner = ( CircleSkinner< T > ) Computers.unary( opService, CircleSkinner.class, resultsTable,
-				dataset, circleThickness, thresholdFactor, sensitivity );
+				dataset, circleThickness, thresholdFactor, sensitivity, minRadius, maxRadius, stepRadius );
 		circleSkinner.compute( dataset, resultsTable );
 
 		if ( null != imp )
