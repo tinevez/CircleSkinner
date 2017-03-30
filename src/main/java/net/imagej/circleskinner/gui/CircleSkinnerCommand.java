@@ -17,7 +17,6 @@ import org.scijava.widget.Button;
 import org.scijava.widget.ChoiceWidget;
 import org.scijava.widget.FileWidget;
 
-import ij.IJ;
 import ij.ImagePlus;
 import ij.gui.Overlay;
 import io.scif.FormatException;
@@ -29,6 +28,7 @@ import net.imagej.ImageJ;
 import net.imagej.circleskinner.CircleSkinner;
 import net.imagej.circleskinner.hough.HoughCircle;
 import net.imagej.circleskinner.util.HoughCircleOverlay;
+import net.imagej.circleskinner.util.PngExporter;
 import net.imagej.display.ImageDisplayService;
 import net.imagej.legacy.LegacyService;
 import net.imagej.ops.OpService;
@@ -84,7 +84,7 @@ public class CircleSkinnerCommand< T extends RealType< T > > implements Command
 	/**
 	 * The circle thickness (crown thickness), in pixel units.
 	 */
-	@Parameter( label = "Circle thickness", min = "1", type = ItemIO.INPUT )
+	@Parameter( label = "Circle thickness (pixels)", min = "1", type = ItemIO.INPUT )
 	private double circleThickness = 10.;
 
 	@Parameter( label = "Threshold adjustment", min = "0", max = "100", type = ItemIO.INPUT )
@@ -137,6 +137,7 @@ public class CircleSkinnerCommand< T extends RealType< T > > implements Command
 	@Override
 	public void run()
 	{
+		final long start = System.currentTimeMillis();
 		resultsTable = CircleSkinner.createResulsTable();
 
 		switch ( analysisTarget )
@@ -161,6 +162,9 @@ public class CircleSkinnerCommand< T extends RealType< T > > implements Command
 			processFolder( folder, resultsTable );
 			break;
 		}
+
+		final long end = System.currentTimeMillis();
+		statusService.showStatus( String.format( "CircleSkinner completed in %.1f min.", ( end - start ) / 60000. ) );
 	}
 
 	@SuppressWarnings( "unchecked" )
@@ -225,17 +229,16 @@ public class CircleSkinnerCommand< T extends RealType< T > > implements Command
 				final Dataset dataset = datasetIOService.open( file.getAbsolutePath() );
 				ImagePlus imp = null;
 				if ( saveSnapshot )
-				{
-					imp = ImageJFunctions.show( ( Img< T > ) dataset.getImgPlus(), dataset.getName() );
-					imp.show();
-				}
+					imp = ImageJFunctions.wrap( ( Img< T > ) dataset.getImgPlus(), dataset.getName() );
 
 				processImage( dataset, resultsTable, imp );
 
 				if ( saveSnapshot )
 				{
-					final String name = dataset.getName().substring( 0, dataset.getName().lastIndexOf( '.' ) ) + ".png";
-					IJ.save( imp, new File( saveFolder, name ).getAbsolutePath() );
+					imp.show();
+					PngExporter.exportToPng( imp, saveFolder );
+					imp.changes = false;
+					imp.close();
 				}
 			}
 			catch ( final IOException e )
@@ -264,7 +267,7 @@ public class CircleSkinnerCommand< T extends RealType< T > > implements Command
 				overlay = new Overlay();
 				imp.setOverlay( overlay );
 			}
-			final HoughCircleOverlay circleOverlay = new HoughCircleOverlay( imp );
+			final HoughCircleOverlay circleOverlay = new HoughCircleOverlay( imp, sensitivity );
 			overlay.add( circleOverlay, "Hough circles" );
 			final Map< Integer, List< HoughCircle > > circles = circleSkinner.getCircles();
 			circleOverlay.setCircles( circles );

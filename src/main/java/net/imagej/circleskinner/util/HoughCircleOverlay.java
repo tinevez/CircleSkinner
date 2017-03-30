@@ -22,9 +22,15 @@ public class HoughCircleOverlay extends Roi
 
 	private final Map< Integer, List< HoughCircle > > circleMap;
 
-	public HoughCircleOverlay( final ImagePlus imp )
+	private final double maxSensitivity;
+
+	private final double minSensitivity;
+
+	public HoughCircleOverlay( final ImagePlus imp, final double maxSensitivity )
 	{
 		super( 0, 0, imp );
+		this.maxSensitivity = maxSensitivity;
+		this.minSensitivity = maxSensitivity / 2.;
 		this.circleMap = new HashMap<>();
 	}
 
@@ -60,16 +66,15 @@ public class HoughCircleOverlay extends Roi
 		final int c = imp.getC() - 1;
 		final AffineTransform transform = g2d.getTransform();
 		g2d.scale( magnification, magnification );
+		g2d.setFont( g2d.getFont().deriveFont( 18f ) );
 
 		final List< HoughCircle > circles = circleMap.get( Integer.valueOf( c ) );
-		if ( null != circles )
+		if ( null != circles && !circles.isEmpty() )
 		{
-			final double max = circles.stream().mapToDouble( ( e ) -> e.getSensitivity() ).max().getAsDouble();
-			final double min = circles.stream().mapToDouble( ( e ) -> e.getSensitivity() ).min().getAsDouble();
-
+			int circleIndex = 0;
 			for ( final HoughCircle circle : circles )
 			{
-				final double alpha = ( circle.getSensitivity() - min ) / ( max - min );
+				final double alpha = ( circle.getSensitivity() - minSensitivity ) / ( maxSensitivity - minSensitivity );
 				g.setColor( CM.get( 1. - alpha ) );
 
 				final double x = circle.getDoublePosition( 0 ) - xcorner + 0.5;
@@ -87,6 +92,8 @@ public class HoughCircleOverlay extends Roi
 				final double h2 = w2;
 				final Ellipse2D ellipse2 = new Ellipse2D.Double( -w2 / 2., -h2 / 2., w2, h2 );
 				g2d.draw( ellipse2 );
+
+				g2d.drawString( "" + ++circleIndex, 0, 0 );
 
 				g2d.translate( -x, -y );
 			}
