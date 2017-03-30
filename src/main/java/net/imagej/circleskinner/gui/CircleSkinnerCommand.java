@@ -2,6 +2,8 @@ package net.imagej.circleskinner.gui;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -158,7 +160,29 @@ public class CircleSkinnerCommand< T extends RealType< T > > implements Command
 		@SuppressWarnings( "unchecked" )
 		final Display< String > m = ( Display< String > ) displayService.createDisplay( "CircleSkinner log", PLUGIN_NAME + " v" + PLUGIN_VERSION );
 		this.messages = m;
-		
+
+		messages.add( "" );
+		messages.add( PLUGIN_NAME + " started on " + SimpleDateFormat.getInstance().format( new Date() ) );
+		switch ( analysisTarget )
+		{
+		case CHOICE1:
+			messages.add( " - Target: active image." );
+			break;
+		case CHOICE2:
+			messages.add( " - Target folder: " + folder );
+			break;
+		default:
+			messages.add( " - Unknown target: " + analysisTarget );
+			break;
+		}
+		messages.add( String.format( " - Circle thickness (pixels): %.1f", circleThickness ) );
+		messages.add( String.format( " - Threshold adjusment: %.1f %%", circleThickness ) );
+		messages.add( String.format( " - Sensitivity: %.1f", sensitivity ) );
+		messages.add( String.format( " - Min. radius (pixels): %.1f", minRadius ) );
+		messages.add( String.format( " - Max. radius (pixels): %.1f", maxRadius ) );
+		messages.add( String.format( " - Step radius (pixels): %.1f", stepRadius ) );
+		messages.add( "" );
+
 		final long start = System.currentTimeMillis();
 		resultsTable = CircleSkinner.createResulsTable();
 
@@ -195,6 +219,7 @@ public class CircleSkinnerCommand< T extends RealType< T > > implements Command
 		final long end = System.currentTimeMillis();
 
 		resultsTable.show( PLUGIN_NAME + " Results" );
+		messages.add( "" );
 		messages.add( String.format( "CircleSkinner completed in %.1f min.", ( end - start ) / 60000. ) );
 		messages.update();
 	}
