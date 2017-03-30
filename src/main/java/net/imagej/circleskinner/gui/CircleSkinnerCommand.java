@@ -42,14 +42,14 @@ import net.imglib2.img.Img;
 import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.type.numeric.RealType;
 
-@Plugin( type = Command.class, menuPath = "Plugins > Circle Skinner GUI" )
+@Plugin( type = Command.class, menuPath = "Plugins > Circle Skinner" )
 public class CircleSkinnerCommand< T extends RealType< T > > implements Command
 {
 	private static final String CHOICE1 = "Current image";
 	private static final String CHOICE2 = "Folder";
 	private static final String PNG_OUTPUT_FOLDER = "PNGs";
 	public static final String PLUGIN_NAME = "CircleSkinner";
-	private static final String PLUGIN_VERSION = "0.1.0-SNAPSHOT";
+	public static final String PLUGIN_VERSION = "1.0.0";
 
 	/*
 	 * SERVICES.
