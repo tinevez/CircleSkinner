@@ -47,12 +47,13 @@ public class CircleSkinner< T extends RealType< T > > extends AbstractUnaryCompu
 	private static final String CIRCLE_X_COLUMN = "X (pixels)";
 	private static final String CIRCLE_Y_COLUMN = "Y (pixels)";
 	private static final String CIRCLE_RADIUS_COLUMN = "R (pixels)";
-	private static final String CIRCLE_THICKNESS_COLUMN = "Thickness (pixels)";
-	private static final String CIRCLE_SENSITIVITY_COLUMN = "Sensitivity";
 	private static final String CIRCLE_MEAN_COLUMN = "Mean";
 	private static final String CIRCLE_STD_COLUMN = "Std";
 	private static final String CIRCLE_N_COLUMN = "N";
 	private static final String CIRCLE_MEDIAN_COLUMN = "Median";
+	private static final String CIRCLE_THICKNESS_COLUMN = "Thickness (pixels)";
+	private static final String CIRCLE_THRESHOLD_COLUMN = "Threshold adj.";
+	private static final String CIRCLE_SENSITIVITY_COLUMN = "Sensitivity";
 
 	/*
 	 * SERVICES.
@@ -114,18 +115,22 @@ public class CircleSkinner< T extends RealType< T > > extends AbstractUnaryCompu
 	public static final DefaultGenericTable createResulsTable()
 	{
 		final DefaultGenericTable table = new DefaultGenericTable();
+		// Input
 		table.add( new GenericColumn( SOURCE_NAME_COLUMN ) );
 		table.add( new IntColumn( CHANEL_COLUMN ) );
 		table.add( new IntColumn( CIRCLE_ID_COLUMN ) );
+		// Detection results.
 		table.add( new DoubleColumn( CIRCLE_X_COLUMN ) );
 		table.add( new DoubleColumn( CIRCLE_Y_COLUMN ) );
 		table.add( new DoubleColumn( CIRCLE_RADIUS_COLUMN ) );
-		table.add( new DoubleColumn( CIRCLE_THICKNESS_COLUMN ) );
-		table.add( new DoubleColumn( CIRCLE_SENSITIVITY_COLUMN ) );
 		table.add( new DoubleColumn( CIRCLE_MEAN_COLUMN ) );
 		table.add( new DoubleColumn( CIRCLE_STD_COLUMN ) );
 		table.add( new IntColumn( CIRCLE_N_COLUMN ) );
 		table.add( new DoubleColumn( CIRCLE_MEDIAN_COLUMN ) );
+		// Detection parameters.
+		table.add( new DoubleColumn( CIRCLE_THICKNESS_COLUMN ) );
+		table.add( new DoubleColumn( CIRCLE_THRESHOLD_COLUMN ) );
+		table.add( new DoubleColumn( CIRCLE_SENSITIVITY_COLUMN ) );
 		return table;
 	}
 
@@ -182,6 +187,7 @@ public class CircleSkinner< T extends RealType< T > > extends AbstractUnaryCompu
 		final DoubleColumn circleYColumn = ( DoubleColumn ) table.get( CIRCLE_Y_COLUMN );
 		final DoubleColumn circleRadiusColumn = ( DoubleColumn ) table.get( CIRCLE_RADIUS_COLUMN );
 		final DoubleColumn circleThicknessColumn = ( DoubleColumn ) table.get( CIRCLE_THICKNESS_COLUMN );
+		final DoubleColumn circleTresholdColumn = ( DoubleColumn ) table.get( CIRCLE_THRESHOLD_COLUMN );
 		final DoubleColumn circleSensitivityColumn = ( DoubleColumn ) table.get( CIRCLE_SENSITIVITY_COLUMN );
 		final DoubleColumn circleMeanColumn = ( DoubleColumn ) table.get( CIRCLE_MEAN_COLUMN );
 		final DoubleColumn circleStdColumn = ( DoubleColumn ) table.get( CIRCLE_STD_COLUMN );
@@ -199,6 +205,7 @@ public class CircleSkinner< T extends RealType< T > > extends AbstractUnaryCompu
 			circleYColumn.add( circle.getDoublePosition( 1 ) );
 			circleRadiusColumn.add( circle.getRadius() );
 			circleThicknessColumn.add( circle.getThickness() );
+			circleTresholdColumn.add( thresholdFactor );
 			circleSensitivityColumn.add( circle.getSensitivity() );
 
 			final Stats stats = circle.getStats();
