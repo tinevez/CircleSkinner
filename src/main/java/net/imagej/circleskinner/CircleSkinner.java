@@ -11,10 +11,12 @@ import org.scijava.plugin.Plugin;
 import org.scijava.thread.ThreadService;
 import org.scijava.ui.UIService;
 
+import ij.measure.ResultsTable;
 import net.imagej.Dataset;
 import net.imagej.ImgPlus;
 import net.imagej.axis.Axes;
 import net.imagej.circleskinner.analyze.CircleAnalyzerOp;
+import net.imagej.circleskinner.gui.CircleSkinnerCommand;
 import net.imagej.circleskinner.hough.HoughCircle;
 import net.imagej.circleskinner.hough.HoughCircle.Stats;
 import net.imagej.circleskinner.hough.HoughDetectorOp;
@@ -23,11 +25,6 @@ import net.imagej.ops.OpService;
 import net.imagej.ops.special.computer.AbstractUnaryComputerOp;
 import net.imagej.ops.special.function.Functions;
 import net.imagej.ops.special.inplace.Inplaces;
-import net.imagej.table.DefaultGenericTable;
-import net.imagej.table.DoubleColumn;
-import net.imagej.table.GenericColumn;
-import net.imagej.table.GenericTable;
-import net.imagej.table.IntColumn;
 import net.imglib2.IterableInterval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.Img;
@@ -39,7 +36,7 @@ import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 
 @Plugin( type = CircleSkinner.class )
-public class CircleSkinner< T extends RealType< T > > extends AbstractUnaryComputerOp< Dataset, GenericTable >
+public class CircleSkinner< T extends RealType< T > > extends AbstractUnaryComputerOp< Dataset, ResultsTable >
 {
 	private static final String SOURCE_NAME_COLUMN = "Image";
 	private static final String CHANEL_COLUMN = "Channel";
@@ -112,30 +109,14 @@ public class CircleSkinner< T extends RealType< T > > extends AbstractUnaryCompu
 		return circles;
 	}
 
-	public static final DefaultGenericTable createResulsTable()
+	public static final ResultsTable createResulsTable()
 	{
-		final DefaultGenericTable table = new DefaultGenericTable();
-		// Input
-		table.add( new GenericColumn( SOURCE_NAME_COLUMN ) );
-		table.add( new IntColumn( CHANEL_COLUMN ) );
-		table.add( new IntColumn( CIRCLE_ID_COLUMN ) );
-		// Detection results.
-		table.add( new DoubleColumn( CIRCLE_X_COLUMN ) );
-		table.add( new DoubleColumn( CIRCLE_Y_COLUMN ) );
-		table.add( new DoubleColumn( CIRCLE_RADIUS_COLUMN ) );
-		table.add( new DoubleColumn( CIRCLE_MEAN_COLUMN ) );
-		table.add( new DoubleColumn( CIRCLE_STD_COLUMN ) );
-		table.add( new IntColumn( CIRCLE_N_COLUMN ) );
-		table.add( new DoubleColumn( CIRCLE_MEDIAN_COLUMN ) );
-		// Detection parameters.
-		table.add( new DoubleColumn( CIRCLE_THICKNESS_COLUMN ) );
-		table.add( new DoubleColumn( CIRCLE_THRESHOLD_COLUMN ) );
-		table.add( new DoubleColumn( CIRCLE_SENSITIVITY_COLUMN ) );
+		final ResultsTable table = new ResultsTable();
 		return table;
 	}
 
 	@Override
-	public void compute( final Dataset source, GenericTable table )
+	public void compute( final Dataset source, ResultsTable table )
 	{
 		if ( null == table )
 			table = createResulsTable();
@@ -176,55 +157,36 @@ public class CircleSkinner< T extends RealType< T > > extends AbstractUnaryCompu
 		}
 	}
 
-	private void appendResults( final List< HoughCircle > circles, final GenericTable table, final String name, final int channelNumber )
+	private void appendResults( final List< HoughCircle > circles, final ResultsTable table, final String name, final int channelNumber )
 	{
 		int circleId = 0;
-
-		final GenericColumn nameColumn = ( GenericColumn ) table.get( SOURCE_NAME_COLUMN );
-		final IntColumn channelColumn = ( IntColumn ) table.get( CHANEL_COLUMN );
-		final IntColumn circleIdColumn = ( IntColumn ) table.get( CIRCLE_ID_COLUMN );
-		final DoubleColumn circleXColumn = ( DoubleColumn ) table.get( CIRCLE_X_COLUMN );
-		final DoubleColumn circleYColumn = ( DoubleColumn ) table.get( CIRCLE_Y_COLUMN );
-		final DoubleColumn circleRadiusColumn = ( DoubleColumn ) table.get( CIRCLE_RADIUS_COLUMN );
-		final DoubleColumn circleThicknessColumn = ( DoubleColumn ) table.get( CIRCLE_THICKNESS_COLUMN );
-		final DoubleColumn circleTresholdColumn = ( DoubleColumn ) table.get( CIRCLE_THRESHOLD_COLUMN );
-		final DoubleColumn circleSensitivityColumn = ( DoubleColumn ) table.get( CIRCLE_SENSITIVITY_COLUMN );
-		final DoubleColumn circleMeanColumn = ( DoubleColumn ) table.get( CIRCLE_MEAN_COLUMN );
-		final DoubleColumn circleStdColumn = ( DoubleColumn ) table.get( CIRCLE_STD_COLUMN );
-		final IntColumn circleNColumn = ( IntColumn ) table.get( CIRCLE_N_COLUMN );
-		final DoubleColumn circleMedianColumn = ( DoubleColumn ) table.get( CIRCLE_MEDIAN_COLUMN );
-
-		final int rowCount = table.getRowCount();
 		for ( final HoughCircle circle : circles )
 		{
-			nameColumn.add( name );
-			channelColumn.add( channelNumber );
+			table.incrementCounter();
 
-			circleIdColumn.add( ++circleId );
-			circleXColumn.add( circle.getDoublePosition( 0 ) );
-			circleYColumn.add( circle.getDoublePosition( 1 ) );
-			circleRadiusColumn.add( circle.getRadius() );
-			circleThicknessColumn.add( circle.getThickness() );
-			circleTresholdColumn.add( thresholdFactor );
-			circleSensitivityColumn.add( circle.getSensitivity() );
+			table.addValue( SOURCE_NAME_COLUMN, name );
+			table.addValue( CHANEL_COLUMN, channelNumber );
+
+			table.addValue( CIRCLE_ID_COLUMN, ++circleId );
+			table.addValue( CIRCLE_X_COLUMN, circle.getDoublePosition( 0 ) );
+			table.addValue( CIRCLE_Y_COLUMN, circle.getDoublePosition( 1 ) );
+			table.addValue( CIRCLE_RADIUS_COLUMN, circle.getRadius() );
 
 			final Stats stats = circle.getStats();
-			if (null == stats)
+			if ( null != stats )
 			{
-				circleMeanColumn.add( Double.NaN );
-				circleStdColumn.add( Double.NaN );
-				circleNColumn.add( null );
-				circleMedianColumn.add( Double.NaN );
+				table.addValue( CIRCLE_MEAN_COLUMN, stats.mean );
+				table.addValue( CIRCLE_STD_COLUMN, stats.std );
+				table.addValue( CIRCLE_N_COLUMN, stats.N );
+				table.addValue( CIRCLE_MEDIAN_COLUMN, stats.median );
 			}
-			else
-			{
-				circleMeanColumn.add( stats.mean );
-				circleStdColumn.add( stats.std );
-				circleNColumn.add( stats.N );
-				circleMedianColumn.add( stats.median );
-			}
+
+			table.addValue( CIRCLE_SENSITIVITY_COLUMN, circle.getSensitivity() );
+			table.addValue( CIRCLE_THICKNESS_COLUMN, circle.getThickness() );
+			table.addValue( CIRCLE_THRESHOLD_COLUMN, thresholdFactor );
+
+			table.show( CircleSkinnerCommand.PLUGIN_NAME + " Results" );
 		}
-		table.setRowCount( rowCount + circles.size() );
 	}
 
 	private List< HoughCircle > processChannel( final RandomAccessibleInterval< T > channel )

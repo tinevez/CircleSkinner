@@ -21,6 +21,7 @@ import org.scijava.widget.FileWidget;
 
 import ij.ImagePlus;
 import ij.gui.Overlay;
+import ij.measure.ResultsTable;
 import io.scif.FormatException;
 import io.scif.config.SCIFIOConfig;
 import io.scif.services.DatasetIOService;
@@ -35,8 +36,6 @@ import net.imagej.display.ImageDisplayService;
 import net.imagej.legacy.LegacyService;
 import net.imagej.ops.OpService;
 import net.imagej.ops.special.computer.Computers;
-import net.imagej.table.DefaultGenericTable;
-import net.imagej.table.GenericTable;
 import net.imglib2.img.Img;
 import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.type.numeric.RealType;
@@ -47,7 +46,7 @@ public class CircleSkinnerCommand< T extends RealType< T > > implements Command
 	private static final String CHOICE1 = "Current image";
 	private static final String CHOICE2 = "Folder";
 	private static final String PNG_OUTPUT_FOLDER = "PNGs";
-	private static final String PLUGIN_NAME = "CircleSkinner";
+	public static final String PLUGIN_NAME = "CircleSkinner";
 	private static final String PLUGIN_VERSION = "0.1.0-SNAPSHOT";
 
 	/*
@@ -137,8 +136,7 @@ public class CircleSkinnerCommand< T extends RealType< T > > implements Command
 	@Parameter( label = "Adjust sensitivity" )
 	private Button adjustSensitivityButton;
 
-	@Parameter( type = ItemIO.OUTPUT )
-	private DefaultGenericTable resultsTable;
+	private ResultsTable resultsTable;
 
 	/*
 	 * FIELDS
@@ -180,21 +178,29 @@ public class CircleSkinnerCommand< T extends RealType< T > > implements Command
 			 */
 
 			final Dataset dataset = imageDisplayService.getActiveDataset();
+			messages.add( "Processing " + dataset );
+			messages.update();
+
 			processImage( dataset, resultsTable, imp );
+
 			break;
+
 		case CHOICE2:
+
 			processFolder( folder, resultsTable );
+
 			break;
 		}
 
 		final long end = System.currentTimeMillis();
 
+		resultsTable.show( PLUGIN_NAME + " Results" );
 		messages.add( String.format( "CircleSkinner completed in %.1f min.", ( end - start ) / 60000. ) );
 		messages.update();
 	}
 
 	@SuppressWarnings( "unchecked" )
-	private void processFolder( final File sourceFolder, final GenericTable resultsTable )
+	private void processFolder( final File sourceFolder, final ResultsTable resultsTable )
 	{
 		/*
 		 * Inspect source folder.
@@ -288,7 +294,7 @@ public class CircleSkinnerCommand< T extends RealType< T > > implements Command
 		messages.update();
 	}
 
-	private void processImage( final Dataset dataset, final GenericTable resultsTable, final ImagePlus imp )
+	private void processImage( final Dataset dataset, final ResultsTable resultsTable, final ImagePlus imp )
 	{
 		@SuppressWarnings( "unchecked" )
 		final CircleSkinner< T > circleSkinner = ( CircleSkinner< T > ) Computers.unary( opService, CircleSkinner.class, resultsTable,
