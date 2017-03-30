@@ -9,6 +9,8 @@ import org.scijava.ItemIO;
 import org.scijava.ItemVisibility;
 import org.scijava.app.StatusService;
 import org.scijava.command.Command;
+import org.scijava.display.Display;
+import org.scijava.display.DisplayService;
 import org.scijava.log.LogService;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
@@ -45,6 +47,8 @@ public class CircleSkinnerCommand< T extends RealType< T > > implements Command
 	private static final String CHOICE1 = "Current image";
 	private static final String CHOICE2 = "Folder";
 	private static final String PNG_OUTPUT_FOLDER = "PNGs";
+	private static final String PLUGIN_NAME = "CircleSkinner";
+	private static final String PLUGIN_VERSION = "0.1.0-SNAPSHOT";
 
 	/*
 	 * SERVICES.
@@ -73,6 +77,9 @@ public class CircleSkinnerCommand< T extends RealType< T > > implements Command
 
 	@Parameter
 	private LegacyService legacyService;
+
+	@Parameter
+	private DisplayService displayService;
 
 	/*
 	 * PARAMETERS.
@@ -134,10 +141,14 @@ public class CircleSkinnerCommand< T extends RealType< T > > implements Command
 	private DefaultGenericTable resultsTable;
 
 	/*
-	 * CONSTRUCTOR.
+	 * FIELDS
 	 */
 
+	private Display< String > messages;
 
+	/*
+	 * CONSTRUCTOR.
+	 */
 
 	/*
 	 * METHODS.
@@ -146,6 +157,10 @@ public class CircleSkinnerCommand< T extends RealType< T > > implements Command
 	@Override
 	public void run()
 	{
+		@SuppressWarnings( "unchecked" )
+		final Display< String > m = ( Display< String > ) displayService.createDisplay( "CircleSkinner log", PLUGIN_NAME + " v" + PLUGIN_VERSION );
+		this.messages = m;
+		
 		final long start = System.currentTimeMillis();
 		resultsTable = CircleSkinner.createResulsTable();
 
@@ -173,7 +188,9 @@ public class CircleSkinnerCommand< T extends RealType< T > > implements Command
 		}
 
 		final long end = System.currentTimeMillis();
-		statusService.showStatus( String.format( "CircleSkinner completed in %.1f min.", ( end - start ) / 60000. ) );
+
+		messages.add( String.format( "CircleSkinner completed in %.1f min.", ( end - start ) / 60000. ) );
+		messages.update();
 	}
 
 	@SuppressWarnings( "unchecked" )
@@ -185,7 +202,8 @@ public class CircleSkinnerCommand< T extends RealType< T > > implements Command
 
 		if ( sourceFolder == null || !sourceFolder.exists() || !sourceFolder.isDirectory() )
 		{
-			statusService.showStatus( "Invalid folder: " + sourceFolder );
+			messages.add( "Invalid folder: " + sourceFolder + ". Exit." );
+			messages.update();
 			return;
 		}
 
@@ -199,7 +217,8 @@ public class CircleSkinnerCommand< T extends RealType< T > > implements Command
 			final File sf = new File( sourceFolder, PNG_OUTPUT_FOLDER );
 			if ( sf.exists() && !sf.isDirectory() )
 			{
-				log.warn( "Cannot ouput PNG shapshots. A file name " + sf.getAbsolutePath() + " exists in input folder." );
+				messages.add( "Cannot ouput PNG shapshots. A file name " + sf.getAbsolutePath() + " exists in input folder." );
+				messages.update();
 				saveSnapshot = false;
 			}
 			else if ( !sf.exists() )
@@ -207,7 +226,8 @@ public class CircleSkinnerCommand< T extends RealType< T > > implements Command
 				final boolean mkdirs = sf.mkdirs();
 				if ( !mkdirs )
 				{
-					log.warn( "Cannot ouput PNG shapshots. Could not create folder " + sf.getAbsolutePath() + "." );
+					messages.add( "Cannot ouput PNG shapshots. Could not create folder " + sf.getAbsolutePath() + "." );
+					messages.update();
 					saveSnapshot = false;
 				}
 			}
@@ -218,8 +238,10 @@ public class CircleSkinnerCommand< T extends RealType< T > > implements Command
 		 * Process file be file.
 		 */
 
+
 		final File[] files = folder.listFiles();
 		int nImages = 0;
+		messages.add( "" );
 		for ( final File file : files )
 		{
 			if ( !file.exists() || !file.isFile() )
@@ -227,12 +249,15 @@ public class CircleSkinnerCommand< T extends RealType< T > > implements Command
 
 			if ( !canOpen( file.getAbsolutePath() ) )
 			{
-				log.info( "File " + file + " is not in a supported format." );
+				messages.add( "File " + file + " is not in a supported format." );
+				messages.update();
 				continue;
 			}
 
 			nImages++;
-			log.info( "Opening " + file );
+
+			messages.add( "Processing " + file );
+			messages.update();
 			try
 			{
 				final Dataset dataset = datasetIOService.open( file.getAbsolutePath() );
@@ -252,13 +277,15 @@ public class CircleSkinnerCommand< T extends RealType< T > > implements Command
 			}
 			catch ( final IOException e )
 			{
-				log.info( "Could not open file " + file + ":\n" + e.getMessage() );
+				messages.add( "Could not open file " + file + ":\n" + e.getMessage() );
+				messages.update();
 				continue;
 			}
 
 		}
 
-		statusService.showStatus( String.format( "Finshed processing %d images.", nImages ) );
+		messages.add( String.format( "\nFinished processing %d images.", nImages ) );
+		messages.update();
 	}
 
 	private void processImage( final Dataset dataset, final GenericTable resultsTable, final ImagePlus imp )
