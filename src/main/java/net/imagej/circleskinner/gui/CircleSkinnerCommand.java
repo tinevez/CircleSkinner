@@ -49,7 +49,7 @@ public class CircleSkinnerCommand< T extends RealType< T > > implements Command
 	private static final String CHOICE2 = "Folder";
 	private static final String PNG_OUTPUT_FOLDER = "PNGs";
 	public static final String PLUGIN_NAME = "CircleSkinner";
-	public static final String PLUGIN_VERSION = "1.0.0";
+	public static final String PLUGIN_VERSION = "1.0.1-SNAPSHOT";
 
 	/*
 	 * SERVICES.
