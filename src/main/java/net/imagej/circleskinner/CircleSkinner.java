@@ -19,7 +19,7 @@ import net.imagej.circleskinner.analyze.CircleAnalyzerOp;
 import net.imagej.circleskinner.gui.CircleSkinnerCommand;
 import net.imagej.circleskinner.hough.HoughCircle;
 import net.imagej.circleskinner.hough.HoughCircle.Stats;
-import net.imagej.circleskinner.hough.HoughDetectorOp;
+import net.imagej.circleskinner.hough.HoughCircleDetectorOp;
 import net.imagej.circleskinner.hough.HoughTransformOp;
 import net.imagej.ops.OpService;
 import net.imagej.ops.special.computer.AbstractUnaryComputerOp;
@@ -232,8 +232,8 @@ public class CircleSkinner< T extends RealType< T > > extends AbstractUnaryCompu
 		statusService.showStatus( "Detecting circles..." );
 
 		@SuppressWarnings( { "rawtypes", "unchecked" } )
-		final HoughDetectorOp< DoubleType > houghDetectOp =
-				( HoughDetectorOp ) Functions.unary( ops, HoughDetectorOp.class, List.class,
+		final HoughCircleDetectorOp< DoubleType > houghDetectOp =
+				( HoughCircleDetectorOp ) Functions.unary( ops, HoughCircleDetectorOp.class, List.class,
 						voteImg, circleThickness, minRadius, stepRadius, sensitivity );
 		final List< HoughCircle > circles = houghDetectOp.calculate( voteImg );
 
