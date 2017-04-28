@@ -11,7 +11,7 @@ import org.scijava.thread.ThreadService;
 import net.imagej.circleskinner.hessian.HessianMatrix;
 import net.imagej.circleskinner.hessian.TensorEigenValues;
 import net.imagej.ops.special.computer.AbstractUnaryComputerOp;
-import net.imagej.ops.special.function.AbstractUnaryFunctionOp;
+import net.imagej.ops.special.hybrid.AbstractUnaryHybridCF;
 import net.imglib2.Dimensions;
 import net.imglib2.FinalDimensions;
 import net.imglib2.RandomAccessibleInterval;
@@ -25,7 +25,8 @@ import net.imglib2.view.Views;
 
 @Plugin( type = TubenessOp.class )
 public class TubenessOp< T extends RealType< T > >
-		extends AbstractUnaryFunctionOp< RandomAccessibleInterval< T >, Img< DoubleType > >
+		extends AbstractUnaryHybridCF< RandomAccessibleInterval< T >, Img< DoubleType > >
+// AbstractUnaryFunctionOp< RandomAccessibleInterval< T >, Img< DoubleType > >
 {
 
 	@Parameter
@@ -47,7 +48,14 @@ public class TubenessOp< T extends RealType< T > >
 	private double[] calibration;
 
 	@Override
-	public Img< DoubleType > calculate( final RandomAccessibleInterval< T > input )
+	public Img< DoubleType > createOutput( final RandomAccessibleInterval< T > input )
+	{
+		final Img< DoubleType > tubeness = ops().create().img( input, new DoubleType() );
+		return tubeness;
+	}
+
+	@Override
+	public void compute( final RandomAccessibleInterval< T > input, final Img< DoubleType > tubeness )
 	{
 		
 		final int numDimensions = input.numDimensions();
@@ -93,8 +101,7 @@ public class TubenessOp< T extends RealType< T > >
 
 			statusService.showProgress( 2, 3 );
 
-			// Tubeness is derived from largest eigenvalues.
-			final Img< DoubleType > tubeness = ops().create().img( input, new DoubleType() );
+
 			final AbstractUnaryComputerOp< Iterable< DoubleType >, DoubleType > method;
 			switch ( numDimensions )
 			{
@@ -105,18 +112,18 @@ public class TubenessOp< T extends RealType< T > >
 				method = new Tubeness3D( sigma );
 			default:
 				System.err.println( "Cannot compute tubeness for " + numDimensions + "D images." );
-				return null;
+				return;
 			}
 			ops().transform().project( tubeness, evs, method, numDimensions );
 
 			statusService.showProgress( 3, 3 );
 
-			return tubeness;
+			return;
 		}
 		catch ( final IncompatibleTypeException e )
 		{
 			e.printStackTrace();
-			return null;
+			return;
 		}
 	}
 
@@ -170,5 +177,6 @@ public class TubenessOp< T extends RealType< T > >
 
 		}
 	}
+
 
 }
