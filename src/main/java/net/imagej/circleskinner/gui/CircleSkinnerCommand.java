@@ -7,13 +7,15 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
+import org.scijava.Cancelable;
 import org.scijava.ItemIO;
 import org.scijava.ItemVisibility;
 import org.scijava.app.StatusService;
 import org.scijava.command.Command;
+import org.scijava.command.CommandService;
+import org.scijava.command.Interactive;
 import org.scijava.display.Display;
 import org.scijava.display.DisplayService;
-import org.scijava.log.LogService;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 import org.scijava.ui.UIService;
@@ -40,10 +42,11 @@ import net.imagej.ops.OpService;
 import net.imagej.ops.special.computer.Computers;
 import net.imglib2.img.Img;
 import net.imglib2.img.display.imagej.ImageJFunctions;
+import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
 
-@Plugin( type = Command.class, menuPath = "Plugins > Circle Skinner" )
-public class CircleSkinnerCommand< T extends RealType< T > > implements Command
+@Plugin( type = Command.class, menuPath = "Plugins > Circle Skinner", headless = false )
+public class CircleSkinnerCommand< T extends RealType< T > & NativeType< T > > implements Command, Interactive, Cancelable
 {
 	private static final String CHOICE1 = "Current image";
 	private static final String CHOICE2 = "Folder";
@@ -56,7 +59,7 @@ public class CircleSkinnerCommand< T extends RealType< T > > implements Command
 	 */
 
 	@Parameter
-	private LogService log;
+	private DisplayService displayService;
 
 	@Parameter
 	private FormatService formatService;
@@ -80,7 +83,7 @@ public class CircleSkinnerCommand< T extends RealType< T > > implements Command
 	private LegacyService legacyService;
 
 	@Parameter
-	private DisplayService displayService;
+	private CommandService commandService;
 
 	/*
 	 * PARAMETERS.
@@ -95,8 +98,8 @@ public class CircleSkinnerCommand< T extends RealType< T > > implements Command
 	@Parameter( label = "Circle thickness (pixels)", min = "1", type = ItemIO.INPUT )
 	private double circleThickness = 10.;
 
-	@Parameter( label = "Threshold adjustment", min = "0", max = "100", type = ItemIO.INPUT )
-	private double thresholdFactor = 10.;
+	@Parameter( label = "Threshold adjustment", min = "0.1", max = "200", type = ItemIO.INPUT )
+	private double thresholdFactor = 100.;
 
 	@Parameter( label = "Circle detection sensitivity", min = "1" )
 	private double sensitivity = 100.;
@@ -132,7 +135,8 @@ public class CircleSkinnerCommand< T extends RealType< T > > implements Command
 	@Parameter( label = "<html><b>Manual adjustments:</b></html>", visibility = ItemVisibility.MESSAGE, persist = false )
 	private String headerAdjustments = " ";
 
-	@Parameter( label = "Adjust threshold" )
+	@Parameter( label = "Adjust threshold", description = "Will show a separate window on which the user will be able to tune the threshold value.",
+			callback = "adjustThreshold" )
 	private Button adjustThresholdButton;
 
 	@Parameter( label = "Adjust sensitivity" )
@@ -150,6 +154,7 @@ public class CircleSkinnerCommand< T extends RealType< T > > implements Command
 	 * CONSTRUCTOR.
 	 */
 
+
 	/*
 	 * METHODS.
 	 */
@@ -157,8 +162,16 @@ public class CircleSkinnerCommand< T extends RealType< T > > implements Command
 	@Override
 	public void run()
 	{
+		System.out.println( "unr!" ); // DEBUG
+	}
+
+	private void process()
+	{
+//		final DisplayService displayService = context().getService( DisplayService.class );
+
 		@SuppressWarnings( "unchecked" )
-		final Display< String > m = ( Display< String > ) displayService.createDisplay( "CircleSkinner log", PLUGIN_NAME + " v" + PLUGIN_VERSION );
+		final Display< String > m = ( Display< String > ) displayService.createDisplay(
+				"CircleSkinner log", PLUGIN_NAME + " v" + PLUGIN_VERSION );
 		this.messages = m;
 
 		messages.add( "" );
@@ -319,27 +332,9 @@ public class CircleSkinnerCommand< T extends RealType< T > > implements Command
 		messages.update();
 	}
 
-	private void processImage( final Dataset dataset, final ResultsTable resultsTable, final ImagePlus imp )
-	{
-		@SuppressWarnings( "unchecked" )
-		final CircleSkinner< T > circleSkinner = ( CircleSkinner< T > ) Computers.unary( opService, CircleSkinner.class, resultsTable,
-				dataset, circleThickness, thresholdFactor, sensitivity, minRadius, maxRadius, stepRadius );
-		circleSkinner.compute( dataset, resultsTable );
-
-		if ( null != imp )
-		{
-			Overlay overlay = imp.getOverlay();
-			if ( null == overlay )
-			{
-				overlay = new Overlay();
-				imp.setOverlay( overlay );
-			}
-			final HoughCircleOverlay circleOverlay = new HoughCircleOverlay( imp, sensitivity );
-			overlay.add( circleOverlay, "Hough circles" );
-			final Map< Integer, List< HoughCircle > > circles = circleSkinner.getCircles();
-			circleOverlay.setCircles( circles );
-		}
-	}
+	/*
+	 * CALLBACKS.
+	 */
 
 	protected void targetChanged()
 	{
@@ -355,14 +350,13 @@ public class CircleSkinnerCommand< T extends RealType< T > > implements Command
 		}
 	}
 
-	private void printCurrentImage()
+	protected void adjustThreshold()
 	{
-		final Dataset dataset = imageDisplayService.getActiveDataset();
-		if ( null == dataset )
-			infoFiles = String.format( "No active image." );
-		else
-			infoFiles = String.format( "Active image: %s.", dataset.getName() );
+		commandService.run( AdjustThresholdCommand.class, true );
+		
+
 	}
+
 
 	protected void folderChanged()
 	{
@@ -386,6 +380,41 @@ public class CircleSkinnerCommand< T extends RealType< T > > implements Command
 		infoFiles = String.format( "Found %d candidate %s.", nImages, ( nImages == 1 ? "image" : "images" ) );
 	}
 
+	/*
+	 * PRIVATE METHODS
+	 */
+
+	private void processImage( final Dataset dataset, final ResultsTable resultsTable, final ImagePlus imp )
+	{
+		@SuppressWarnings( "unchecked" )
+		final CircleSkinner< T > circleSkinner = ( CircleSkinner< T > ) Computers.unary( opService, CircleSkinner.class, resultsTable,
+				dataset, circleThickness, thresholdFactor, sensitivity, minRadius, maxRadius, stepRadius );
+		circleSkinner.compute( dataset, resultsTable );
+
+		if ( null != imp )
+		{
+			Overlay overlay = imp.getOverlay();
+			if ( null == overlay )
+			{
+				overlay = new Overlay();
+				imp.setOverlay( overlay );
+			}
+			final HoughCircleOverlay circleOverlay = new HoughCircleOverlay( imp, sensitivity );
+			overlay.add( circleOverlay, "Hough circles" );
+			final Map< Integer, List< HoughCircle > > circles = circleSkinner.getCircles();
+			circleOverlay.setCircles( circles );
+		}
+	}
+
+	private void printCurrentImage()
+	{
+		final Dataset dataset = imageDisplayService.getActiveDataset();
+		if ( null == dataset )
+			infoFiles = String.format( "No active image." );
+		else
+			infoFiles = String.format( "Active image: %s.", dataset.getName() );
+	}
+
 	public boolean canOpen( final String source )
 	{
 		try
@@ -406,6 +435,25 @@ public class CircleSkinnerCommand< T extends RealType< T > > implements Command
 		final Object dataset = ij.io().open( "samples/ca-01.lsm" );
 		ij.ui().show( dataset );
 		ij.command().run( CircleSkinnerCommand.class, true );
+	}
+
+	@Override
+	public boolean isCanceled()
+	{
+		System.out.println( "iscanceled" ); // DEBUG
+		return false;
+	}
+
+	@Override
+	public void cancel( final String reason )
+	{
+		System.out.println( "Cancel " + reason ); // DEBUG
+	}
+
+	@Override
+	public String getCancelReason()
+	{
+		return "getcancelreadon";
 	}
 }
 
