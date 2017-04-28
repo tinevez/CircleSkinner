@@ -1,14 +1,29 @@
 package net.imagej.circleskinner.gui;
 
+import java.awt.BorderLayout;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.awt.Toolkit;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.util.HashSet;
 
-import org.scijava.Initializable;
-import org.scijava.ItemIO;
+import javax.swing.JButton;
+import javax.swing.JDialog;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JSlider;
+import javax.swing.JSpinner;
+import javax.swing.SpinnerNumberModel;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
+
+import org.scijava.Context;
 import org.scijava.app.StatusService;
-import org.scijava.command.InteractiveCommand;
 import org.scijava.plugin.Parameter;
-import org.scijava.plugin.Plugin;
 import org.scijava.ui.UIService;
 
 import ij.ImagePlus;
@@ -31,9 +46,18 @@ import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.util.Util;
 
-@Plugin( type = AdjustThresholdCommand.class, label = "Circle Skinner Threshold Adjuster", headless = false )
-public class AdjustThresholdCommand< T extends RealType< T > & NativeType< T > > extends InteractiveCommand implements Initializable
+public class AdjustThresholdCommand< T extends RealType< T > & NativeType< T > > extends JDialog
 {
+
+	private static final long serialVersionUID = 1L;
+
+	private static final int MAX_THICKNESS = 50;
+
+	private static final int MIN_THICKNESS = 1;
+
+	private static final double MAX_THRESHOLD = 5.;
+
+	private static final double MIN_THRESHOLD = 0.1;
 
 	/*
 	 * SERVICES.
@@ -64,16 +88,13 @@ public class AdjustThresholdCommand< T extends RealType< T > & NativeType< T > >
 	/**
 	 * Will take the current display regardless of the input.
 	 */
-	@Parameter
 	private ImageDisplay source;
 
 	/**
 	 * The circle thickness (crown thickness), in pixel units.
 	 */
-	@Parameter( label = "Circle thickness (pixels)", min = "1", type = ItemIO.INPUT )
-	private double circleThickness = 10.;
+	private int circleThickness = 10;
 
-	@Parameter( label = "Threshold adjustment", min = "0.01", max = "20", type = ItemIO.INPUT )
 	private double thresholdFactor = 1.;
 
 	/*
@@ -90,11 +111,175 @@ public class AdjustThresholdCommand< T extends RealType< T > & NativeType< T > >
 
 	private IterableInterval< BitType > thresholded;
 
-	@SuppressWarnings( { "unchecked", "rawtypes" } )
-	@Override
-	public void initialize()
+	private final HashSet< ActionListener > listeners = new HashSet<>();
+
+	private JLabel lblInfoPixels;
+
+	/*
+	 * CONSTRUCTOR.
+	 */
+
+	public AdjustThresholdCommand( final ImageDisplay source, final int circleThickness, final double thresholdFactor, final Context context )
 	{
-		System.out.println( "initialize()" ); // DEBUG
+		this.source = source;
+		this.circleThickness = circleThickness;
+		this.thresholdFactor = thresholdFactor;
+		context.inject( this );
+		initialize();
+	}
+
+	/*
+	 * METHODS.
+	 */
+
+	public void addActionListener( final ActionListener listener )
+	{
+		listeners.add( listener );
+	}
+
+	public void removeActionListener( final ActionListener listener )
+	{
+		listeners.remove( listener );
+	}
+
+	private void cancelAdjustment()
+	{
+		filteredImp.changes = false;
+		filteredImp.close();
+		thresholdedImp.changes = false;
+		thresholdedImp.close();
+		for ( final ActionListener listener : listeners )
+			listener.actionPerformed( new ActionEvent( this, 1, "cancel" ) );
+	}
+
+	private void acceptAdjustment()
+	{
+		filteredImp.changes = false;
+		filteredImp.close();
+		thresholdedImp.changes = false;
+		thresholdedImp.close();
+		for ( final ActionListener listener : listeners )
+			listener.actionPerformed( new ActionEvent( this, 0, "OK" ) );
+	}
+
+	@SuppressWarnings( { "unchecked", "rawtypes" } )
+	private void initialize()
+	{
+		final JPanel panelButtons = new JPanel();
+		final FlowLayout flowLayout = ( FlowLayout ) panelButtons.getLayout();
+		flowLayout.setAlignment( FlowLayout.TRAILING );
+		getContentPane().add( panelButtons, BorderLayout.SOUTH );
+
+		final JButton btnCancel = new JButton( "Cancel" );
+		panelButtons.add( btnCancel );
+
+		final JButton btnOk = new JButton( "OK" );
+		panelButtons.add( btnOk );
+
+		final JPanel panelAdjustments = new JPanel();
+		getContentPane().add( panelAdjustments, BorderLayout.CENTER );
+		final GridBagLayout gbl_panelAdjustments = new GridBagLayout();
+		gbl_panelAdjustments.columnWidths = new int[] { 0, 0, 0, 0 };
+		gbl_panelAdjustments.rowHeights = new int[] { 0, 0, 0, 0 };
+		gbl_panelAdjustments.columnWeights = new double[] { 0.0, 1.0, 1.0, Double.MIN_VALUE };
+		gbl_panelAdjustments.rowWeights = new double[] { 0.0, 0.0, 1.0, Double.MIN_VALUE };
+		panelAdjustments.setLayout( gbl_panelAdjustments );
+
+		final JLabel lblCircleThicknesspixels = new JLabel( "Circle thickness (pixels):" );
+		final GridBagConstraints gbc_lblCircleThicknesspixels = new GridBagConstraints();
+		gbc_lblCircleThicknesspixels.anchor = GridBagConstraints.EAST;
+		gbc_lblCircleThicknesspixels.insets = new Insets( 5, 5, 5, 5 );
+		gbc_lblCircleThicknesspixels.gridx = 0;
+		gbc_lblCircleThicknesspixels.gridy = 0;
+		panelAdjustments.add( lblCircleThicknesspixels, gbc_lblCircleThicknesspixels );
+
+		final JSlider sliderCircleThickness = new JSlider();
+		sliderCircleThickness.setPaintLabels( true );
+		sliderCircleThickness.setValue( circleThickness );
+		sliderCircleThickness.setMaximum( MAX_THICKNESS );
+		sliderCircleThickness.setMinimum( MIN_THICKNESS );
+		sliderCircleThickness.setMinorTickSpacing( 2 );
+		sliderCircleThickness.setMajorTickSpacing( 10 );
+		sliderCircleThickness.setPaintTicks( true );
+		final GridBagConstraints gbc_sliderCircleThickness = new GridBagConstraints();
+		gbc_sliderCircleThickness.fill = GridBagConstraints.HORIZONTAL;
+		gbc_sliderCircleThickness.insets = new Insets( 0, 0, 5, 5 );
+		gbc_sliderCircleThickness.gridx = 1;
+		gbc_sliderCircleThickness.gridy = 0;
+		panelAdjustments.add( sliderCircleThickness, gbc_sliderCircleThickness );
+
+		final JSpinner spinnerCircleThickness = new JSpinner( new SpinnerNumberModel( circleThickness, MIN_THICKNESS, MAX_THICKNESS, 1 ) );
+		final GridBagConstraints gbc_spinnerCircleThickness = new GridBagConstraints();
+		gbc_spinnerCircleThickness.fill = GridBagConstraints.HORIZONTAL;
+		gbc_spinnerCircleThickness.insets = new Insets( 0, 0, 5, 5 );
+		gbc_spinnerCircleThickness.gridx = 2;
+		gbc_spinnerCircleThickness.gridy = 0;
+		panelAdjustments.add( spinnerCircleThickness, gbc_spinnerCircleThickness );
+
+		spinnerCircleThickness.addChangeListener( ( e ) -> sliderCircleThickness.setValue( ( int ) spinnerCircleThickness.getValue() ) );
+		sliderCircleThickness.addChangeListener( new ChangeListener()
+		{
+			@Override
+			public void stateChanged( final ChangeEvent e )
+			{
+				spinnerCircleThickness.setValue( sliderCircleThickness.getValue() );
+				previewAll();
+			}
+		} );
+
+		final JLabel lblThresholdAdjustment = new JLabel( "Threshold adjustment (%):" );
+		final GridBagConstraints gbc_lblThresholdAdjustment = new GridBagConstraints();
+		gbc_lblThresholdAdjustment.insets = new Insets( 5, 5, 5, 5 );
+		gbc_lblThresholdAdjustment.anchor = GridBagConstraints.EAST;
+		gbc_lblThresholdAdjustment.gridx = 0;
+		gbc_lblThresholdAdjustment.gridy = 1;
+		panelAdjustments.add( lblThresholdAdjustment, gbc_lblThresholdAdjustment );
+
+		final JSlider sliderThreshold = new JSlider();
+		sliderThreshold.setPaintLabels( true );
+		sliderThreshold.setMinorTickSpacing( 10 );
+		sliderThreshold.setMajorTickSpacing( 100 );
+		sliderThreshold.setPaintTicks( true );
+		sliderThreshold.setValue( ( int ) ( thresholdFactor * 100 ) );
+		sliderThreshold.setMaximum( ( int ) ( MAX_THRESHOLD * 100 ) );
+		sliderThreshold.setMinimum( ( int ) ( MIN_THRESHOLD * 100 ) );
+		final GridBagConstraints gbc_sliderThreshold = new GridBagConstraints();
+		gbc_sliderThreshold.fill = GridBagConstraints.HORIZONTAL;
+		gbc_sliderThreshold.insets = new Insets( 0, 0, 5, 5 );
+		gbc_sliderThreshold.gridx = 1;
+		gbc_sliderThreshold.gridy = 1;
+		panelAdjustments.add( sliderThreshold, gbc_sliderThreshold );
+
+		final JSpinner spinnerThreshold = new JSpinner( new SpinnerNumberModel(
+				( int ) ( thresholdFactor * 100 ), ( int ) ( MIN_THRESHOLD * 100 ), ( int ) ( MAX_THRESHOLD * 100 ), 10 ) );
+		final GridBagConstraints gbc_spinnerThreshold = new GridBagConstraints();
+		gbc_spinnerThreshold.fill = GridBagConstraints.HORIZONTAL;
+		gbc_spinnerThreshold.insets = new Insets( 0, 0, 5, 5 );
+		gbc_spinnerThreshold.gridx = 2;
+		gbc_spinnerThreshold.gridy = 1;
+		panelAdjustments.add( spinnerThreshold, gbc_spinnerThreshold );
+
+		spinnerThreshold.addChangeListener( ( e ) -> sliderThreshold.setValue( ( int ) spinnerThreshold.getValue() ) );
+		sliderThreshold.addChangeListener( new ChangeListener()
+		{
+			@Override
+			public void stateChanged( final ChangeEvent e )
+			{
+				spinnerThreshold.setValue( sliderThreshold.getValue() );
+				previewThreshold();
+			}
+		} );
+
+		lblInfoPixels = new JLabel( " " );
+		final GridBagConstraints gbc_lblInfoPixels = new GridBagConstraints();
+		gbc_lblInfoPixels.anchor = GridBagConstraints.SOUTHEAST;
+		gbc_lblInfoPixels.gridwidth = 3;
+		gbc_lblInfoPixels.insets = new Insets( 0, 0, 0, 5 );
+		gbc_lblInfoPixels.gridx = 0;
+		gbc_lblInfoPixels.gridy = 2;
+		panelAdjustments.add( lblInfoPixels, gbc_lblInfoPixels );
+
+
 		/*
 		 * We have to go through IJ to get a slice because the IJ2 display does
 		 * not report what slice it is currently displaying.
@@ -117,22 +302,17 @@ public class AdjustThresholdCommand< T extends RealType< T > & NativeType< T > >
 		this.thresholded = opService.threshold().apply( filtered, otsuThreshold );
 		this.thresholdedImp = ImageJFunctions.wrapBit( ( RandomAccessibleInterval< BitType > ) thresholded,
 				"Thresholded - " + imp.getShortTitle() );
-
 		filteredImp.show();
 		thresholdedImp.show();
-	}
+		setupWindows();
 
-	@Override
-	public void run()
-	{
-		System.out.println( "run()" ); // DEBUG
+		setLocationRelativeTo( filteredImp.getWindow() );
+		pack();
 
 	}
 
-	@Override
-	public void preview()
+	private void previewAll()
 	{
-		System.out.println( "preview()" ); // DEBUG
 		/*
 		 * Tubeness filter.
 		 */
@@ -149,8 +329,17 @@ public class AdjustThresholdCommand< T extends RealType< T > & NativeType< T > >
 		filteredImp.setProcessor( processor );
 		filteredImp.updateAndDraw();
 		
-		statusService.showStatus( "Thresholding..." );
+		previewThreshold();
+	}
 
+	private void previewThreshold()
+	{
+
+		/*
+		 * Threshold.
+		 */
+
+		statusService.showStatus( "Thresholding..." );
 		final Histogram1d< DoubleType > histo = opService.image().histogram( filtered );
 		final DoubleType otsuThreshold = opService.threshold().otsu( histo );
 		otsuThreshold.mul( thresholdFactor );
@@ -162,8 +351,10 @@ public class AdjustThresholdCommand< T extends RealType< T > & NativeType< T > >
 		thresholdedImp.setProcessor( processor2 );
 		thresholdedImp.updateAndDraw();
 		
-		if (!filteredImp.isVisible())
-			setupWindows();
+		statusService.clearStatus();
+
+		lblInfoPixels.setText( String.format( "Retained %5.1f%% pixels.",
+				100. * opService.stats().sum( thresholded ).getRealDouble() / thresholded.size() ) );
 	}
 
 	private void setupWindows()
@@ -183,20 +374,22 @@ public class AdjustThresholdCommand< T extends RealType< T > & NativeType< T > >
 		while ( w1 + x >= ws / 2 || h1 + y > hs / 2 )
 		{
 			nZoomOut++;
-			filteredImp.getCanvas().zoomOut( x + w1 / 2, y + h1 / 2 );
+			filteredImp.getCanvas().zoomOut( w1 / 2, h1 / 2 );
 			w1 = filteredImp.getWindow().getWidth();
 			h1 = filteredImp.getWindow().getHeight();
 		}
+		filteredImp.getWindow().setLocation( x, y );
 		
 		thresholdedImp.show();
 		int w2 = thresholdedImp.getWindow().getWidth();
 		int h2 = thresholdedImp.getWindow().getHeight();
 		for ( int i = 0; i < nZoomOut; i++ )
 		{
-			thresholdedImp.getCanvas().zoomOut( x + w2 / 2, y + h2 / 2 + h1 );
+			thresholdedImp.getCanvas().zoomOut( w2 / 2, h2 / 2 );
 			w2 = thresholdedImp.getWindow().getWidth();
 			h2 = thresholdedImp.getWindow().getHeight();
 		}
+		thresholdedImp.getWindow().setLocation( x, y + h1 );
 
 	}
 }

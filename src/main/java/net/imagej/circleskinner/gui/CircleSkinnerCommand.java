@@ -10,7 +10,6 @@ import java.util.Map;
 import org.scijava.Cancelable;
 import org.scijava.ItemIO;
 import org.scijava.ItemVisibility;
-import org.scijava.app.StatusService;
 import org.scijava.command.Command;
 import org.scijava.command.CommandService;
 import org.scijava.command.Interactive;
@@ -18,7 +17,7 @@ import org.scijava.display.Display;
 import org.scijava.display.DisplayService;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
-import org.scijava.ui.UIService;
+import org.scijava.thread.ThreadService;
 import org.scijava.widget.Button;
 import org.scijava.widget.ChoiceWidget;
 import org.scijava.widget.FileWidget;
@@ -49,9 +48,13 @@ import net.imglib2.type.numeric.RealType;
 public class CircleSkinnerCommand< T extends RealType< T > & NativeType< T > > implements Command, Interactive, Cancelable
 {
 	private static final String CHOICE1 = "Current image";
+
 	private static final String CHOICE2 = "Folder";
+
 	private static final String PNG_OUTPUT_FOLDER = "PNGs";
+
 	public static final String PLUGIN_NAME = "CircleSkinner";
+
 	public static final String PLUGIN_VERSION = "1.0.1-SNAPSHOT";
 
 	/*
@@ -65,16 +68,10 @@ public class CircleSkinnerCommand< T extends RealType< T > & NativeType< T > > i
 	private FormatService formatService;
 
 	@Parameter
-	private StatusService statusService;
-
-	@Parameter
 	private DatasetIOService datasetIOService;
 
 	@Parameter
 	private ImageDisplayService imageDisplayService;
-
-	@Parameter
-	private UIService uiService;
 
 	@Parameter
 	private OpService opService;
@@ -84,6 +81,9 @@ public class CircleSkinnerCommand< T extends RealType< T > & NativeType< T > > i
 
 	@Parameter
 	private CommandService commandService;
+
+	@Parameter
+	private ThreadService threadService;
 
 	/*
 	 * PARAMETERS.
@@ -96,7 +96,7 @@ public class CircleSkinnerCommand< T extends RealType< T > & NativeType< T > > i
 	 * The circle thickness (crown thickness), in pixel units.
 	 */
 	@Parameter( label = "Circle thickness (pixels)", min = "1", type = ItemIO.INPUT )
-	private double circleThickness = 10.;
+	private int circleThickness = 10;
 
 	@Parameter( label = "Threshold adjustment", min = "0.1", max = "200", type = ItemIO.INPUT )
 	private double thresholdFactor = 100.;
@@ -135,7 +135,8 @@ public class CircleSkinnerCommand< T extends RealType< T > & NativeType< T > > i
 	@Parameter( label = "<html><b>Manual adjustments:</b></html>", visibility = ItemVisibility.MESSAGE, persist = false )
 	private String headerAdjustments = " ";
 
-	@Parameter( label = "Adjust threshold", description = "Will show a separate window on which the user will be able to tune the threshold value.",
+	@Parameter( label = "Adjust threshold", description = "Will show a separate window on which the user will "
+			+ "be able to tune the threshold value.",
 			callback = "adjustThreshold" )
 	private Button adjustThresholdButton;
 
@@ -153,7 +154,6 @@ public class CircleSkinnerCommand< T extends RealType< T > & NativeType< T > > i
 	/*
 	 * CONSTRUCTOR.
 	 */
-
 
 	/*
 	 * METHODS.
@@ -256,7 +256,7 @@ public class CircleSkinnerCommand< T extends RealType< T > & NativeType< T > > i
 		 */
 
 		String saveFolder = sourceFolder.getAbsolutePath();
-		if (saveSnapshot)
+		if ( saveSnapshot )
 		{
 			final File sf = new File( sourceFolder, PNG_OUTPUT_FOLDER );
 			if ( sf.exists() && !sf.isDirectory() )
@@ -281,7 +281,6 @@ public class CircleSkinnerCommand< T extends RealType< T > & NativeType< T > > i
 		/*
 		 * Process file be file.
 		 */
-
 
 		final File[] files = folder.listFiles();
 		int nImages = 0;
@@ -338,7 +337,7 @@ public class CircleSkinnerCommand< T extends RealType< T > & NativeType< T > > i
 
 	protected void targetChanged()
 	{
-		switch (analysisTarget)
+		switch ( analysisTarget )
 		{
 		case CHOICE1:
 		default:
@@ -352,11 +351,9 @@ public class CircleSkinnerCommand< T extends RealType< T > & NativeType< T > > i
 
 	protected void adjustThreshold()
 	{
-		commandService.run( AdjustThresholdCommand.class, true );
-		
+		new AdjustThresholdCommand< T >( imageDisplayService.getActiveImageDisplay(), circleThickness, thresholdFactor, opService.getContext() ).setVisible( true );
 
 	}
-
 
 	protected void folderChanged()
 	{
@@ -456,4 +453,3 @@ public class CircleSkinnerCommand< T extends RealType< T > & NativeType< T > > i
 		return "getcancelreadon";
 	}
 }
-
