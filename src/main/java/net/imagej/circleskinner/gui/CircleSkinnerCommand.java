@@ -1,5 +1,7 @@
 package net.imagej.circleskinner.gui;
 
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -11,13 +13,12 @@ import org.scijava.Cancelable;
 import org.scijava.ItemIO;
 import org.scijava.ItemVisibility;
 import org.scijava.command.Command;
-import org.scijava.command.CommandService;
 import org.scijava.command.Interactive;
+import org.scijava.command.InteractiveCommand;
 import org.scijava.display.Display;
 import org.scijava.display.DisplayService;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
-import org.scijava.thread.ThreadService;
 import org.scijava.widget.Button;
 import org.scijava.widget.ChoiceWidget;
 import org.scijava.widget.FileWidget;
@@ -45,7 +46,7 @@ import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
 
 @Plugin( type = Command.class, menuPath = "Plugins > Circle Skinner", headless = false )
-public class CircleSkinnerCommand< T extends RealType< T > & NativeType< T > > implements Command, Interactive, Cancelable
+public class CircleSkinnerCommand< T extends RealType< T > & NativeType< T > > extends InteractiveCommand implements Command, Interactive, Cancelable
 {
 	private static final String CHOICE1 = "Current image";
 
@@ -61,8 +62,8 @@ public class CircleSkinnerCommand< T extends RealType< T > & NativeType< T > > i
 	 * SERVICES.
 	 */
 
-	@Parameter
-	private DisplayService displayService;
+//	@Parameter
+//	private DisplayService displayService;
 
 	@Parameter
 	private FormatService formatService;
@@ -79,11 +80,11 @@ public class CircleSkinnerCommand< T extends RealType< T > & NativeType< T > > i
 	@Parameter
 	private LegacyService legacyService;
 
-	@Parameter
-	private CommandService commandService;
+//	@Parameter
+//	private CommandService commandService;
 
-	@Parameter
-	private ThreadService threadService;
+//	@Parameter
+//	private ThreadService threadService;
 
 	/*
 	 * PARAMETERS.
@@ -98,7 +99,7 @@ public class CircleSkinnerCommand< T extends RealType< T > & NativeType< T > > i
 	@Parameter( label = "Circle thickness (pixels)", min = "1", type = ItemIO.INPUT )
 	private int circleThickness = 10;
 
-	@Parameter( label = "Threshold adjustment", min = "0.1", max = "200", type = ItemIO.INPUT )
+	@Parameter( label = "Threshold adjustment (%)", min = "0.1", max = "200", type = ItemIO.INPUT )
 	private double thresholdFactor = 100.;
 
 	@Parameter( label = "Circle detection sensitivity", min = "1" )
@@ -167,7 +168,7 @@ public class CircleSkinnerCommand< T extends RealType< T > & NativeType< T > > i
 
 	private void process()
 	{
-//		final DisplayService displayService = context().getService( DisplayService.class );
+		final DisplayService displayService = context().getService( DisplayService.class );
 
 		@SuppressWarnings( "unchecked" )
 		final Display< String > m = ( Display< String > ) displayService.createDisplay(
@@ -189,7 +190,7 @@ public class CircleSkinnerCommand< T extends RealType< T > & NativeType< T > > i
 			break;
 		}
 		messages.add( String.format( " - Circle thickness (pixels): %.1f", circleThickness ) );
-		messages.add( String.format( " - Threshold adjusment: %.1f %%", circleThickness ) );
+		messages.add( String.format( " - Threshold adjusment: %.1f %%", thresholdFactor ) );
 		messages.add( String.format( " - Sensitivity: %.1f", sensitivity ) );
 		messages.add( String.format( " - Min. radius (pixels): %.1f", minRadius ) );
 		messages.add( String.format( " - Max. radius (pixels): %.1f", maxRadius ) );
@@ -351,8 +352,23 @@ public class CircleSkinnerCommand< T extends RealType< T > & NativeType< T > > i
 
 	protected void adjustThreshold()
 	{
-		new AdjustThresholdCommand< T >( imageDisplayService.getActiveImageDisplay(), circleThickness, thresholdFactor, opService.getContext() ).setVisible( true );
-
+		final AdjustThresholdDialog< T > adjustThresholdDialog = new AdjustThresholdDialog<>(
+				imageDisplayService.getActiveImageDisplay(),
+				circleThickness, thresholdFactor / 100.,
+				opService.getContext() );
+		adjustThresholdDialog.addActionListener( new ActionListener()
+		{
+			@Override
+			public void actionPerformed( final ActionEvent e )
+			{
+				if ( e.getActionCommand().equals( "OK" ) )
+				{
+					thresholdFactor = adjustThresholdDialog.getThresholdFactor() * 100.;
+					circleThickness = adjustThresholdDialog.getCircleThickness();
+				}
+			}
+		} );
+		adjustThresholdDialog.setVisible( true );
 	}
 
 	protected void folderChanged()
@@ -412,7 +428,7 @@ public class CircleSkinnerCommand< T extends RealType< T > & NativeType< T > > i
 			infoFiles = String.format( "Active image: %s.", dataset.getName() );
 	}
 
-	public boolean canOpen( final String source )
+	private boolean canOpen( final String source )
 	{
 		try
 		{

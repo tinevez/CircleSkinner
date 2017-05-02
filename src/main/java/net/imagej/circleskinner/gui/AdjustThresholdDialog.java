@@ -30,6 +30,7 @@ import ij.ImagePlus;
 import ij.process.ImageProcessor;
 import net.imagej.DatasetService;
 import net.imagej.circleskinner.TubenessOp;
+import net.imagej.circleskinner.util.DisplayUpdater;
 import net.imagej.display.ImageDisplay;
 import net.imagej.display.ImageDisplayService;
 import net.imagej.legacy.LegacyService;
@@ -46,7 +47,7 @@ import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.util.Util;
 
-public class AdjustThresholdCommand< T extends RealType< T > & NativeType< T > > extends JDialog
+public class AdjustThresholdDialog< T extends RealType< T > & NativeType< T > > extends JDialog
 {
 
 	private static final long serialVersionUID = 1L;
@@ -115,11 +116,29 @@ public class AdjustThresholdCommand< T extends RealType< T > & NativeType< T > >
 
 	private JLabel lblInfoPixels;
 
+	private final DisplayUpdater previewAllUpdater = new DisplayUpdater()
+	{
+		@Override
+		public void refresh()
+		{
+			previewAll();
+		}
+	};
+
+	private final DisplayUpdater previewThresholdUpdater = new DisplayUpdater()
+	{
+		@Override
+		public void refresh()
+		{
+			previewThreshold();
+		}
+	};
+
 	/*
 	 * CONSTRUCTOR.
 	 */
 
-	public AdjustThresholdCommand( final ImageDisplay source, final int circleThickness, final double thresholdFactor, final Context context )
+	public AdjustThresholdDialog( final ImageDisplay source, final int circleThickness, final double thresholdFactor, final Context context )
 	{
 		this.source = source;
 		this.circleThickness = circleThickness;
@@ -131,6 +150,16 @@ public class AdjustThresholdCommand< T extends RealType< T > & NativeType< T > >
 	/*
 	 * METHODS.
 	 */
+
+	public double getThresholdFactor()
+	{
+		return thresholdFactor;
+	}
+
+	public int getCircleThickness()
+	{
+		return circleThickness;
+	}
 
 	public void addActionListener( final ActionListener listener )
 	{
@@ -150,6 +179,10 @@ public class AdjustThresholdCommand< T extends RealType< T > & NativeType< T > >
 		thresholdedImp.close();
 		for ( final ActionListener listener : listeners )
 			listener.actionPerformed( new ActionEvent( this, 1, "cancel" ) );
+
+		previewAllUpdater.quit();
+		previewThresholdUpdater.quit();
+		dispose();
 	}
 
 	private void acceptAdjustment()
@@ -160,6 +193,10 @@ public class AdjustThresholdCommand< T extends RealType< T > & NativeType< T > >
 		thresholdedImp.close();
 		for ( final ActionListener listener : listeners )
 			listener.actionPerformed( new ActionEvent( this, 0, "OK" ) );
+
+		previewAllUpdater.quit();
+		previewThresholdUpdater.quit();
+		dispose();
 	}
 
 	@SuppressWarnings( { "unchecked", "rawtypes" } )
@@ -171,9 +208,11 @@ public class AdjustThresholdCommand< T extends RealType< T > & NativeType< T > >
 		getContentPane().add( panelButtons, BorderLayout.SOUTH );
 
 		final JButton btnCancel = new JButton( "Cancel" );
+		btnCancel.addActionListener( ( e ) -> cancelAdjustment() );
 		panelButtons.add( btnCancel );
 
 		final JButton btnOk = new JButton( "OK" );
+		btnOk.addActionListener( ( e ) -> acceptAdjustment() );
 		panelButtons.add( btnOk );
 
 		final JPanel panelAdjustments = new JPanel();
@@ -223,7 +262,8 @@ public class AdjustThresholdCommand< T extends RealType< T > & NativeType< T > >
 			public void stateChanged( final ChangeEvent e )
 			{
 				spinnerCircleThickness.setValue( sliderCircleThickness.getValue() );
-				previewAll();
+				circleThickness = ( int ) spinnerCircleThickness.getValue();
+				previewAllUpdater.doUpdate();
 			}
 		} );
 
@@ -266,7 +306,8 @@ public class AdjustThresholdCommand< T extends RealType< T > & NativeType< T > >
 			public void stateChanged( final ChangeEvent e )
 			{
 				spinnerThreshold.setValue( sliderThreshold.getValue() );
-				previewThreshold();
+				thresholdFactor = ( int ) spinnerThreshold.getValue() / 100.;
+				previewThresholdUpdater.doUpdate();
 			}
 		} );
 
@@ -317,8 +358,8 @@ public class AdjustThresholdCommand< T extends RealType< T > & NativeType< T > >
 		 * Tubeness filter.
 		 */
 
-		statusService.showStatus( "Filtering..." );
 		final double sigma = circleThickness / 2. / Math.sqrt( slice.numDimensions() );
+		statusService.showStatus( String.format( "Filtering with sigma = %.1f...", sigma ) );
 		@SuppressWarnings( { "unchecked", "rawtypes" } )
 		final TubenessOp< T > tubeness = ( TubenessOp ) Hybrids.unaryCF( opService, TubenessOp.class, Img.class,
 				slice, sigma, Util.getArrayFromValue( 1., slice.numDimensions() ) );
