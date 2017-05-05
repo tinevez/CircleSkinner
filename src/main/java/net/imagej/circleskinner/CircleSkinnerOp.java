@@ -16,7 +16,7 @@ import net.imagej.Dataset;
 import net.imagej.ImgPlus;
 import net.imagej.axis.Axes;
 import net.imagej.circleskinner.analyze.CircleAnalyzerOp;
-import net.imagej.circleskinner.gui.CircleSkinnerCommand;
+import net.imagej.circleskinner.gui.CircleSkinnerGUI;
 import net.imagej.circleskinner.hough.HoughCircle;
 import net.imagej.circleskinner.hough.HoughCircle.Stats;
 import net.imagej.circleskinner.hough.HoughCircleDetectorOp;
@@ -35,8 +35,8 @@ import net.imglib2.util.Util;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 
-@Plugin( type = CircleSkinner.class )
-public class CircleSkinner< T extends RealType< T > > extends AbstractUnaryComputerOp< Dataset, ResultsTable >
+@Plugin( type = CircleSkinnerOp.class )
+public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryComputerOp< Dataset, ResultsTable >
 {
 	private static final String SOURCE_NAME_COLUMN = "Image";
 	private static final String CHANEL_COLUMN = "Channel";
@@ -185,7 +185,7 @@ public class CircleSkinner< T extends RealType< T > > extends AbstractUnaryCompu
 			table.addValue( CIRCLE_THICKNESS_COLUMN, circle.getThickness() );
 			table.addValue( CIRCLE_THRESHOLD_COLUMN, thresholdFactor );
 
-			table.show( CircleSkinnerCommand.PLUGIN_NAME + " Results" );
+			table.show( CircleSkinnerGUI.PLUGIN_NAME + " Results" );
 		}
 	}
 
