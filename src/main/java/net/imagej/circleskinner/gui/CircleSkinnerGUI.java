@@ -819,6 +819,9 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 
 	private void adjustThreshold()
 	{
+		if ( imageDisplayService.getActiveImageDisplay() == null )
+			return;
+
 		final AdjustThresholdDialog< T > adjustThresholdDialog = new AdjustThresholdDialog<>(
 				imageDisplayService.getActiveImageDisplay(),
 				circleThickness, thresholdFactor / 100.,
@@ -840,7 +843,29 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 
 	private void adjustSensitivity()
 	{
-		// TODO
+		if ( imageDisplayService.getActiveImageDisplay() == null )
+			return;
+
+		final AdjustSensitivityDialog< T > adjustSensitivityDialog = new AdjustSensitivityDialog<>(
+				imageDisplayService.getActiveImageDisplay(),
+				circleThickness,
+				thresholdFactor,
+				minRadius,
+				maxRadius,
+				stepRadius,
+				opService.getContext() );
+		adjustSensitivityDialog.addActionListener( new ActionListener()
+		{
+			@Override
+			public void actionPerformed( final ActionEvent e )
+			{
+				if ( e.getActionCommand().equals( "OK" ) )
+				{
+					System.out.println( "OK!" ); // DEBUG
+				}
+			}
+		} );
+		adjustSensitivityDialog.setVisible( true );
 	}
 
 	private void folderChanged( final JLabel label )
@@ -876,7 +901,7 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 	{
 		@SuppressWarnings( "unchecked" )
 		final CircleSkinnerOp< T > circleSkinner = ( CircleSkinnerOp< T > ) Computers.unary( opService, CircleSkinnerOp.class, resultsTable,
-				dataset, circleThickness, thresholdFactor, sensitivity, minRadius, maxRadius, stepRadius );
+				dataset, circleThickness, thresholdFactor, sensitivity, minRadius, maxRadius, stepRadius, true );
 		circleSkinner.compute( dataset, resultsTable );
 
 		if ( null != imp )

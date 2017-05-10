@@ -93,6 +93,9 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 	@Parameter( label = "Radius step (pixels)", min = "1", type = ItemIO.INPUT )
 	private double stepRadius = 2.;
 
+	@Parameter( label = "Show results table", required = false, type = ItemIO.INPUT )
+	private boolean showResultsTable = false;
+
 	/*
 	 * OUTPUT PARAMETERS.
 	 */
@@ -185,7 +188,8 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 			table.addValue( CIRCLE_THICKNESS_COLUMN, circle.getThickness() );
 			table.addValue( CIRCLE_THRESHOLD_COLUMN, thresholdFactor );
 
-			table.show( CircleSkinnerGUI.PLUGIN_NAME + " Results" );
+			if ( showResultsTable )
+				table.show( CircleSkinnerGUI.PLUGIN_NAME + " Results" );
 		}
 	}
 
