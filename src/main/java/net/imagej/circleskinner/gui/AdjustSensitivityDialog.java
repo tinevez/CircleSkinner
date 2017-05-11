@@ -40,6 +40,7 @@ import org.jfree.data.statistics.HistogramType;
 import org.scijava.Context;
 import org.scijava.log.LogService;
 import org.scijava.plugin.Parameter;
+import org.scijava.ui.UIService;
 
 import ij.ImagePlus;
 import ij.gui.Overlay;
@@ -47,6 +48,8 @@ import ij.measure.ResultsTable;
 import net.imagej.Dataset;
 import net.imagej.DefaultDataset;
 import net.imagej.ImgPlus;
+import net.imagej.axis.Axes;
+import net.imagej.axis.AxisType;
 import net.imagej.circleskinner.CircleSkinnerOp;
 import net.imagej.circleskinner.hough.HoughCircle;
 import net.imagej.circleskinner.util.DisplayUpdater;
@@ -60,6 +63,7 @@ import net.imglib2.img.Img;
 import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
+import net.imglib2.type.numeric.real.DoubleType;
 
 public class AdjustSensitivityDialog< T extends RealType< T > & NativeType< T > > extends JDialog
 {
@@ -69,6 +73,9 @@ public class AdjustSensitivityDialog< T extends RealType< T > & NativeType< T > 
 	/*
 	 * SERVICES.
 	 */
+
+	@Parameter
+	private UIService uiService;
 
 	@Parameter
 	private LegacyService legacyService;
@@ -129,6 +136,8 @@ public class AdjustSensitivityDialog< T extends RealType< T > & NativeType< T > 
 
 	private double[] sensitivities = new double[] { CircleSkinnerGUI.MIN_SENSITIVITY };
 
+	private Img< DoubleType > voteImg;
+
 	/*
 	 * CONSTRUCTOR.
 	 */
@@ -173,6 +182,7 @@ public class AdjustSensitivityDialog< T extends RealType< T > & NativeType< T > 
 		newImp.changes = false;
 		newImp.close();
 		overlayUpdater.quit();
+		voteImg = null;
 
 		for ( final ActionListener listener : listeners )
 			listener.actionPerformed( new ActionEvent( this, 1, "cancel" ) );
@@ -185,6 +195,7 @@ public class AdjustSensitivityDialog< T extends RealType< T > & NativeType< T > 
 		newImp.changes = false;
 		newImp.close();
 		overlayUpdater.quit();
+		voteImg = null;
 
 		for ( final ActionListener listener : listeners )
 			listener.actionPerformed( new ActionEvent( this, 0, "OK" ) );
@@ -213,9 +224,9 @@ public class AdjustSensitivityDialog< T extends RealType< T > & NativeType< T > 
 		getContentPane().add( panelAdjustments, BorderLayout.CENTER );
 		final GridBagLayout gbl_panelAdjustments = new GridBagLayout();
 		gbl_panelAdjustments.columnWidths = new int[] { 0, 168, 0, 0 };
-		gbl_panelAdjustments.rowHeights = new int[] { 0, 152, 0, 0 };
+		gbl_panelAdjustments.rowHeights = new int[] { 0, 152, 0, 0, 0 };
 		gbl_panelAdjustments.columnWeights = new double[] { 1.0, 1.0, 1.0, Double.MIN_VALUE };
-		gbl_panelAdjustments.rowWeights = new double[] { 0.0, 1.0, 0.0, Double.MIN_VALUE };
+		gbl_panelAdjustments.rowWeights = new double[] { 0.0, 1.0, 0.0, 0.0, Double.MIN_VALUE };
 		panelAdjustments.setLayout( gbl_panelAdjustments );
 
 		final JLabel lblCircleThicknesspixels = new JLabel( "Sensitivity" );
@@ -230,8 +241,8 @@ public class AdjustSensitivityDialog< T extends RealType< T > & NativeType< T > 
 		sliderSensitivity.setPaintLabels( true );
 		sliderSensitivity.setMaximum( CircleSkinnerGUI.MAX_SENSITIVITY );
 		sliderSensitivity.setMinimum( CircleSkinnerGUI.MIN_SENSITIVITY );
-		sliderSensitivity.setMinorTickSpacing( 25 );
-		sliderSensitivity.setMajorTickSpacing( 100 );
+		sliderSensitivity.setMinorTickSpacing( 250 );
+		sliderSensitivity.setMajorTickSpacing( 1000 );
 		sliderSensitivity.setPaintTicks( true );
 		sliderSensitivity.setValue( ( int ) sensitivity );
 		final GridBagConstraints gbc_sliderSensitivity = new GridBagConstraints();
@@ -269,12 +280,28 @@ public class AdjustSensitivityDialog< T extends RealType< T > & NativeType< T > 
 		gbc_lblHistogram.gridy = 1;
 		panelAdjustments.add( lblHistogram, gbc_lblHistogram );
 
+		final JLabel lblShowVoteImage = new JLabel( "Show vote image." );
+		final GridBagConstraints gbc_lblShowVoteImage = new GridBagConstraints();
+		gbc_lblShowVoteImage.anchor = GridBagConstraints.EAST;
+		gbc_lblShowVoteImage.insets = new Insets( 0, 0, 5, 5 );
+		gbc_lblShowVoteImage.gridx = 1;
+		gbc_lblShowVoteImage.gridy = 2;
+		panelAdjustments.add( lblShowVoteImage, gbc_lblShowVoteImage );
+
+		final JButton btnShow = new JButton( "Show" );
+		btnShow.addActionListener( ( e ) -> new Thread( () -> uiService.show( voteImg ) ).start() );
+		final GridBagConstraints gbc_btnShow = new GridBagConstraints();
+		gbc_btnShow.insets = new Insets( 0, 0, 5, 0 );
+		gbc_btnShow.gridx = 2;
+		gbc_btnShow.gridy = 2;
+		panelAdjustments.add( btnShow, gbc_btnShow );
+
 		lblInfo = new JLabel( " " );
 		final GridBagConstraints gbc_lblInfoPixels = new GridBagConstraints();
 		gbc_lblInfoPixels.anchor = GridBagConstraints.SOUTHEAST;
 		gbc_lblInfoPixels.gridwidth = 3;
 		gbc_lblInfoPixels.gridx = 0;
-		gbc_lblInfoPixels.gridy = 2;
+		gbc_lblInfoPixels.gridy = 3;
 		panelAdjustments.add( lblInfo, gbc_lblInfoPixels );
 
 		lblInfo.setText( "Please wait while detecting circles..." );
@@ -327,12 +354,24 @@ public class AdjustSensitivityDialog< T extends RealType< T > & NativeType< T > 
 
 		final ResultsTable table = CircleSkinnerOp.createResulsTable();
 
+		final boolean keepVoteImg = true;
 		@SuppressWarnings( "unchecked" )
 		final CircleSkinnerOp< T > circleSkinner = ( CircleSkinnerOp< T > ) Computers.unary( opService, CircleSkinnerOp.class, ResultsTable.class,
-				Dataset.class, circleThickness, thresholdFactor, CircleSkinnerGUI.MAX_SENSITIVITY, minRadius, maxRadius, stepRadius, false );
+				Dataset.class,
+				circleThickness,
+				thresholdFactor,
+				CircleSkinnerGUI.MAX_SENSITIVITY,
+				minRadius,
+				maxRadius,
+				stepRadius,
+				false,
+				keepVoteImg );
 		final Dataset dataset = new DefaultDataset( context, new ImgPlus<>( slice ) );
 		circleSkinner.compute( dataset, table );
+
 		final Map< Integer, List< HoughCircle > > circles = circleSkinner.getCircles();
+		this.voteImg = new ImgPlus<>( circleSkinner.getVoteImg(), "Vote image", 
+				new AxisType[] { Axes.X, Axes.Y, Axes.Z } );
 
 		/*
 		 * Collect sensitivity values.
