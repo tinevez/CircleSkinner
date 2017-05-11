@@ -26,12 +26,15 @@ public class HoughCircleOverlay extends Roi
 
 	private final double minSensitivity;
 
+	private double sensitivity;
+
 	public HoughCircleOverlay( final ImagePlus imp, final double maxSensitivity )
 	{
 		super( 0, 0, imp );
 		this.maxSensitivity = maxSensitivity;
 		this.minSensitivity = maxSensitivity / 2.;
 		this.circleMap = new HashMap<>();
+		this.sensitivity = maxSensitivity;
 	}
 
 	/**
@@ -64,6 +67,7 @@ public class HoughCircleOverlay extends Roi
 		g2d.setStroke( new BasicStroke( ( float ) ( 1. / magnification ) ) );
 
 		final int c = imp.getC() - 1;
+		System.out.println( c ); // DEBUG
 		final AffineTransform transform = g2d.getTransform();
 		g2d.scale( magnification, magnification );
 		g2d.setFont( g2d.getFont().deriveFont( 18f ) );
@@ -74,7 +78,13 @@ public class HoughCircleOverlay extends Roi
 			int circleIndex = 0;
 			for ( final HoughCircle circle : circles )
 			{
-				final double alpha = ( circle.getSensitivity() - minSensitivity ) / ( maxSensitivity - minSensitivity );
+
+				// Do not paint circles with sensitivity higher than our bound.
+				final double s = circle.getSensitivity();
+				if ( s > sensitivity )
+					continue;
+
+				final double alpha = ( s - minSensitivity ) / ( maxSensitivity - minSensitivity );
 				g.setColor( CM.get( 1. - alpha ) );
 
 				final double x = circle.getDoublePosition( 0 ) - xcorner + 0.5;
@@ -100,5 +110,10 @@ public class HoughCircleOverlay extends Roi
 		}
 
 		g2d.setTransform( transform );
+	}
+
+	public void setSensitivity( final double sensitivity )
+	{
+		this.sensitivity = sensitivity;
 	}
 }
