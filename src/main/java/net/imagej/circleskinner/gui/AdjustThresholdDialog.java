@@ -52,14 +52,6 @@ public class AdjustThresholdDialog< T extends RealType< T > & NativeType< T > > 
 
 	private static final long serialVersionUID = 1L;
 
-	private static final int MAX_THICKNESS = 50;
-
-	private static final int MIN_THICKNESS = 1;
-
-	private static final double MAX_THRESHOLD = 5.;
-
-	private static final double MIN_THRESHOLD = 0.1;
-
 	/*
 	 * SERVICES.
 	 */
@@ -96,7 +88,7 @@ public class AdjustThresholdDialog< T extends RealType< T > & NativeType< T > > 
 	 */
 	private int circleThickness = 10;
 
-	private double thresholdFactor = 1.;
+	private double thresholdFactor = 100.;
 
 	/*
 	 * FIELDS.
@@ -202,6 +194,8 @@ public class AdjustThresholdDialog< T extends RealType< T > & NativeType< T > > 
 	@SuppressWarnings( { "unchecked", "rawtypes" } )
 	private void initialize()
 	{
+		setTitle( CircleSkinnerGUI.PLUGIN_NAME + " Adjust thickness and threshold" );
+
 		final JPanel panelButtons = new JPanel();
 		final FlowLayout flowLayout = ( FlowLayout ) panelButtons.getLayout();
 		flowLayout.setAlignment( FlowLayout.TRAILING );
@@ -235,8 +229,8 @@ public class AdjustThresholdDialog< T extends RealType< T > & NativeType< T > > 
 		final JSlider sliderCircleThickness = new JSlider();
 		sliderCircleThickness.setPaintLabels( true );
 		sliderCircleThickness.setValue( circleThickness );
-		sliderCircleThickness.setMaximum( MAX_THICKNESS );
-		sliderCircleThickness.setMinimum( MIN_THICKNESS );
+		sliderCircleThickness.setMaximum( CircleSkinnerGUI.MAX_THICKNESS );
+		sliderCircleThickness.setMinimum( CircleSkinnerGUI.MIN_THICKNESS );
 		sliderCircleThickness.setMinorTickSpacing( 2 );
 		sliderCircleThickness.setMajorTickSpacing( 10 );
 		sliderCircleThickness.setPaintTicks( true );
@@ -247,7 +241,8 @@ public class AdjustThresholdDialog< T extends RealType< T > & NativeType< T > > 
 		gbc_sliderCircleThickness.gridy = 0;
 		panelAdjustments.add( sliderCircleThickness, gbc_sliderCircleThickness );
 
-		final JSpinner spinnerCircleThickness = new JSpinner( new SpinnerNumberModel( circleThickness, MIN_THICKNESS, MAX_THICKNESS, 1 ) );
+		final JSpinner spinnerCircleThickness = new JSpinner( new SpinnerNumberModel( circleThickness,
+				CircleSkinnerGUI.MIN_THICKNESS, CircleSkinnerGUI.MAX_THICKNESS, 1 ) );
 		final GridBagConstraints gbc_spinnerCircleThickness = new GridBagConstraints();
 		gbc_spinnerCircleThickness.fill = GridBagConstraints.HORIZONTAL;
 		gbc_spinnerCircleThickness.insets = new Insets( 0, 0, 5, 5 );
@@ -277,12 +272,12 @@ public class AdjustThresholdDialog< T extends RealType< T > & NativeType< T > > 
 
 		final JSlider sliderThreshold = new JSlider();
 		sliderThreshold.setPaintLabels( true );
-		sliderThreshold.setMinorTickSpacing( 10 );
+		sliderThreshold.setMinorTickSpacing( 20 );
 		sliderThreshold.setMajorTickSpacing( 100 );
 		sliderThreshold.setPaintTicks( true );
-		sliderThreshold.setValue( ( int ) ( thresholdFactor * 100 ) );
-		sliderThreshold.setMaximum( ( int ) ( MAX_THRESHOLD * 100 ) );
-		sliderThreshold.setMinimum( ( int ) ( MIN_THRESHOLD * 100 ) );
+		sliderThreshold.setMaximum( CircleSkinnerGUI.MAX_THRESHOLD );
+		sliderThreshold.setMinimum( CircleSkinnerGUI.MIN_THRESHOLD );
+		sliderThreshold.setValue( ( int ) ( thresholdFactor ) );
 		final GridBagConstraints gbc_sliderThreshold = new GridBagConstraints();
 		gbc_sliderThreshold.fill = GridBagConstraints.HORIZONTAL;
 		gbc_sliderThreshold.insets = new Insets( 0, 0, 5, 5 );
@@ -291,7 +286,7 @@ public class AdjustThresholdDialog< T extends RealType< T > & NativeType< T > > 
 		panelAdjustments.add( sliderThreshold, gbc_sliderThreshold );
 
 		final JSpinner spinnerThreshold = new JSpinner( new SpinnerNumberModel(
-				( int ) ( thresholdFactor * 100 ), ( int ) ( MIN_THRESHOLD * 100 ), ( int ) ( MAX_THRESHOLD * 100 ), 10 ) );
+				( int ) ( thresholdFactor ), CircleSkinnerGUI.MIN_THRESHOLD, CircleSkinnerGUI.MAX_THRESHOLD, 10 ) );
 		final GridBagConstraints gbc_spinnerThreshold = new GridBagConstraints();
 		gbc_spinnerThreshold.fill = GridBagConstraints.HORIZONTAL;
 		gbc_spinnerThreshold.insets = new Insets( 0, 0, 5, 5 );
@@ -306,7 +301,7 @@ public class AdjustThresholdDialog< T extends RealType< T > & NativeType< T > > 
 			public void stateChanged( final ChangeEvent e )
 			{
 				spinnerThreshold.setValue( sliderThreshold.getValue() );
-				thresholdFactor = ( int ) spinnerThreshold.getValue() / 100.;
+				thresholdFactor = ( int ) spinnerThreshold.getValue();
 				previewThresholdUpdater.doUpdate();
 			}
 		} );
@@ -338,11 +333,14 @@ public class AdjustThresholdDialog< T extends RealType< T > & NativeType< T > > 
 
 		final Histogram1d< DoubleType > histo = opService.image().histogram( filtered );
 		final DoubleType otsuThreshold = opService.threshold().otsu( histo );
-		otsuThreshold.mul( thresholdFactor );
+		otsuThreshold.mul( thresholdFactor / 100. );
 
 		this.thresholded = opService.threshold().apply( filtered, otsuThreshold );
 		this.thresholdedImp = ImageJFunctions.wrapBit( ( RandomAccessibleInterval< BitType > ) thresholded,
 				"Thresholded - " + imp.getShortTitle() );
+
+		previewAll();
+
 		filteredImp.show();
 		thresholdedImp.show();
 		setupWindows();
@@ -383,7 +381,7 @@ public class AdjustThresholdDialog< T extends RealType< T > & NativeType< T > > 
 		statusService.showStatus( "Thresholding..." );
 		final Histogram1d< DoubleType > histo = opService.image().histogram( filtered );
 		final DoubleType otsuThreshold = opService.threshold().otsu( histo );
-		otsuThreshold.mul( thresholdFactor );
+		otsuThreshold.mul( thresholdFactor / 100. );
 
 		opService.threshold().apply( thresholded, filtered, otsuThreshold );
 		@SuppressWarnings( "unchecked" )

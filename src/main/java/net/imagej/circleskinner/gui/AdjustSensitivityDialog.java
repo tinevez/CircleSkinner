@@ -1,6 +1,8 @@
 package net.imagej.circleskinner.gui;
 
+import java.awt.BasicStroke;
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
@@ -12,6 +14,7 @@ import java.awt.event.ActionListener;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 import javax.swing.JButton;
 import javax.swing.JDialog;
@@ -24,24 +27,32 @@ import javax.swing.SwingWorker;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
+import org.jfree.chart.ChartFactory;
+import org.jfree.chart.ChartPanel;
+import org.jfree.chart.JFreeChart;
+import org.jfree.chart.plot.IntervalMarker;
+import org.jfree.chart.plot.PlotOrientation;
+import org.jfree.chart.plot.XYPlot;
+import org.jfree.chart.renderer.xy.StandardXYBarPainter;
+import org.jfree.chart.renderer.xy.XYBarRenderer;
+import org.jfree.data.statistics.HistogramDataset;
+import org.jfree.data.statistics.HistogramType;
 import org.scijava.Context;
-import org.scijava.app.StatusService;
+import org.scijava.log.LogService;
 import org.scijava.plugin.Parameter;
-import org.scijava.ui.UIService;
 
 import ij.ImagePlus;
 import ij.gui.Overlay;
 import ij.measure.ResultsTable;
 import net.imagej.Dataset;
-import net.imagej.DatasetService;
 import net.imagej.DefaultDataset;
 import net.imagej.ImgPlus;
 import net.imagej.circleskinner.CircleSkinnerOp;
 import net.imagej.circleskinner.hough.HoughCircle;
+import net.imagej.circleskinner.util.DisplayUpdater;
 import net.imagej.circleskinner.util.EverythingDisablerAndReenabler;
 import net.imagej.circleskinner.util.HoughCircleOverlay;
 import net.imagej.display.ImageDisplay;
-import net.imagej.display.ImageDisplayService;
 import net.imagej.legacy.LegacyService;
 import net.imagej.ops.OpService;
 import net.imagej.ops.special.computer.Computers;
@@ -55,10 +66,6 @@ public class AdjustSensitivityDialog< T extends RealType< T > & NativeType< T > 
 
 	private static final long serialVersionUID = 1L;
 
-	private static final int MAX_SENSITIVITY = 500;
-
-	private static final int MIN_SENSITIVITY = 10;
-
 	/*
 	 * SERVICES.
 	 */
@@ -66,20 +73,15 @@ public class AdjustSensitivityDialog< T extends RealType< T > & NativeType< T > 
 	@Parameter
 	private LegacyService legacyService;
 
-	@Parameter 
-	private StatusService statusService;
-
 	@Parameter
 	private OpService opService;
 
 	@Parameter
-	private UIService uiService;
+	private LogService log;
 
-	@Parameter
-	private ImageDisplayService imageDisplayService;
-
-	@Parameter
-	private DatasetService datasetService;
+	/*
+	 * FIELDS
+	 */
 
 	/**
 	 * Will take the current display regardless of the input.
@@ -93,15 +95,11 @@ public class AdjustSensitivityDialog< T extends RealType< T > & NativeType< T > 
 
 	private final double thresholdFactor;
 
-	/*
-	 * FIELDS.
-	 */
-
 	private final HashSet< ActionListener > listeners = new HashSet<>();
 
 	private JLabel lblInfo;
 
-	private double sensitivity = MAX_SENSITIVITY;
+	private double sensitivity;
 
 	private final int minRadius;
 
@@ -111,6 +109,26 @@ public class AdjustSensitivityDialog< T extends RealType< T > & NativeType< T > 
 
 	private final Context context;
 
+	private final DisplayUpdater overlayUpdater = new DisplayUpdater()
+	{
+
+		@Override
+		public void refresh()
+		{
+			refreshOverlay();
+		}
+	};
+
+	private HoughCircleOverlay circleOverlay;
+
+	private ImagePlus newImp;
+
+	private JPanel panelAdjustments;
+
+	private IntervalMarker intervalMarker;
+
+	private double[] sensitivities = new double[] { CircleSkinnerGUI.MIN_SENSITIVITY };
+
 	/*
 	 * CONSTRUCTOR.
 	 */
@@ -118,6 +136,7 @@ public class AdjustSensitivityDialog< T extends RealType< T > & NativeType< T > 
 	public AdjustSensitivityDialog( final ImageDisplay source,
 			final int circleThickness,
 			final double thresholdFactor,
+			final double sensitivity,
 			final int minRadius,
 			final int maxRadius,
 			final int stepRadius,
@@ -126,6 +145,7 @@ public class AdjustSensitivityDialog< T extends RealType< T > & NativeType< T > 
 		this.source = source;
 		this.circleThickness = circleThickness;
 		this.thresholdFactor = thresholdFactor;
+		this.sensitivity = sensitivity;
 		this.minRadius = minRadius;
 		this.maxRadius = maxRadius;
 		this.stepRadius = stepRadius;
@@ -150,6 +170,10 @@ public class AdjustSensitivityDialog< T extends RealType< T > & NativeType< T > 
 
 	private void cancelAdjustment()
 	{
+		newImp.changes = false;
+		newImp.close();
+		overlayUpdater.quit();
+
 		for ( final ActionListener listener : listeners )
 			listener.actionPerformed( new ActionEvent( this, 1, "cancel" ) );
 
@@ -158,6 +182,9 @@ public class AdjustSensitivityDialog< T extends RealType< T > & NativeType< T > 
 
 	private void acceptAdjustment()
 	{
+		newImp.changes = false;
+		newImp.close();
+		overlayUpdater.quit();
 
 		for ( final ActionListener listener : listeners )
 			listener.actionPerformed( new ActionEvent( this, 0, "OK" ) );
@@ -167,6 +194,8 @@ public class AdjustSensitivityDialog< T extends RealType< T > & NativeType< T > 
 
 	private void initialize()
 	{
+		setTitle( CircleSkinnerGUI.PLUGIN_NAME + " Adjust sensitivity" );
+
 		final JPanel panelButtons = new JPanel();
 		final FlowLayout flowLayout = ( FlowLayout ) panelButtons.getLayout();
 		flowLayout.setAlignment( FlowLayout.TRAILING );
@@ -180,13 +209,13 @@ public class AdjustSensitivityDialog< T extends RealType< T > & NativeType< T > 
 		btnOk.addActionListener( ( e ) -> acceptAdjustment() );
 		panelButtons.add( btnOk );
 
-		final JPanel panelAdjustments = new JPanel();
+		this.panelAdjustments = new JPanel();
 		getContentPane().add( panelAdjustments, BorderLayout.CENTER );
 		final GridBagLayout gbl_panelAdjustments = new GridBagLayout();
 		gbl_panelAdjustments.columnWidths = new int[] { 0, 168, 0, 0 };
-		gbl_panelAdjustments.rowHeights = new int[] { 0, 0, 0, 0 };
-		gbl_panelAdjustments.columnWeights = new double[] { 0.0, 1.0, 1.0, Double.MIN_VALUE };
-		gbl_panelAdjustments.rowWeights = new double[] { 0.0, 0.0, 1.0, Double.MIN_VALUE };
+		gbl_panelAdjustments.rowHeights = new int[] { 0, 152, 0, 0 };
+		gbl_panelAdjustments.columnWeights = new double[] { 1.0, 1.0, 1.0, Double.MIN_VALUE };
+		gbl_panelAdjustments.rowWeights = new double[] { 0.0, 1.0, 0.0, Double.MIN_VALUE };
 		panelAdjustments.setLayout( gbl_panelAdjustments );
 
 		final JLabel lblCircleThicknesspixels = new JLabel( "Sensitivity" );
@@ -199,12 +228,12 @@ public class AdjustSensitivityDialog< T extends RealType< T > & NativeType< T > 
 
 		final JSlider sliderSensitivity = new JSlider();
 		sliderSensitivity.setPaintLabels( true );
-		sliderSensitivity.setValue( ( int ) sensitivity );
-		sliderSensitivity.setMaximum( 500 );
-		sliderSensitivity.setMinimum( 10 );
+		sliderSensitivity.setMaximum( CircleSkinnerGUI.MAX_SENSITIVITY );
+		sliderSensitivity.setMinimum( CircleSkinnerGUI.MIN_SENSITIVITY );
 		sliderSensitivity.setMinorTickSpacing( 25 );
 		sliderSensitivity.setMajorTickSpacing( 100 );
 		sliderSensitivity.setPaintTicks( true );
+		sliderSensitivity.setValue( ( int ) sensitivity );
 		final GridBagConstraints gbc_sliderSensitivity = new GridBagConstraints();
 		gbc_sliderSensitivity.fill = GridBagConstraints.HORIZONTAL;
 		gbc_sliderSensitivity.insets = new Insets( 0, 0, 5, 5 );
@@ -212,10 +241,11 @@ public class AdjustSensitivityDialog< T extends RealType< T > & NativeType< T > 
 		gbc_sliderSensitivity.gridy = 0;
 		panelAdjustments.add( sliderSensitivity, gbc_sliderSensitivity );
 
-		final JSpinner spinnerSensitivity = new JSpinner( new SpinnerNumberModel( ( int ) sensitivity, MIN_SENSITIVITY, MAX_SENSITIVITY, 10 ) );
+		final JSpinner spinnerSensitivity = new JSpinner( new SpinnerNumberModel( ( int ) sensitivity,
+				CircleSkinnerGUI.MIN_SENSITIVITY, CircleSkinnerGUI.MAX_SENSITIVITY, 10 ) );
 		final GridBagConstraints gbc_spinnerSensitivity = new GridBagConstraints();
 		gbc_spinnerSensitivity.fill = GridBagConstraints.HORIZONTAL;
-		gbc_spinnerSensitivity.insets = new Insets( 0, 0, 5, 5 );
+		gbc_spinnerSensitivity.insets = new Insets( 0, 0, 5, 0 );
 		gbc_spinnerSensitivity.gridx = 2;
 		gbc_spinnerSensitivity.gridy = 0;
 		panelAdjustments.add( spinnerSensitivity, gbc_spinnerSensitivity );
@@ -228,19 +258,26 @@ public class AdjustSensitivityDialog< T extends RealType< T > & NativeType< T > 
 			{
 				spinnerSensitivity.setValue( sliderSensitivity.getValue() );
 				sensitivity = ( int ) spinnerSensitivity.getValue();
+				overlayUpdater.doUpdate();
 			}
 		} );
+
+		final JLabel lblHistogram = new JLabel( "Histogram" );
+		final GridBagConstraints gbc_lblHistogram = new GridBagConstraints();
+		gbc_lblHistogram.insets = new Insets( 5, 5, 5, 5 );
+		gbc_lblHistogram.gridx = 0;
+		gbc_lblHistogram.gridy = 1;
+		panelAdjustments.add( lblHistogram, gbc_lblHistogram );
 
 		lblInfo = new JLabel( " " );
 		final GridBagConstraints gbc_lblInfoPixels = new GridBagConstraints();
 		gbc_lblInfoPixels.anchor = GridBagConstraints.SOUTHEAST;
 		gbc_lblInfoPixels.gridwidth = 3;
-		gbc_lblInfoPixels.insets = new Insets( 0, 0, 0, 5 );
 		gbc_lblInfoPixels.gridx = 0;
 		gbc_lblInfoPixels.gridy = 2;
 		panelAdjustments.add( lblInfo, gbc_lblInfoPixels );
 
-		lblInfo.setText( "Please wait while detecting circles." );
+		lblInfo.setText( "Please wait while detecting circles..." );
 		pack();
 
 		final EverythingDisablerAndReenabler reenabler = new EverythingDisablerAndReenabler( this, new Class[] { JLabel.class } );
@@ -259,8 +296,24 @@ public class AdjustSensitivityDialog< T extends RealType< T > & NativeType< T > 
 			@Override
 			protected void done()
 			{
-				reenabler.reenable();
-				lblInfo.setText( "Detection done." );
+				try
+				{
+					lblInfo.setText( "Detection done." );
+					reenabler.reenable();
+					get();
+				}
+				catch ( final ExecutionException e )
+				{
+					e.getCause().printStackTrace();
+					final String msg = String.format( "Unexpected problem: %s",
+							e.getCause().toString() );
+					log.error( msg );
+				}
+				catch ( final InterruptedException e )
+				{
+					e.printStackTrace();
+				}
+
 			}
 		}.execute();
 	}
@@ -268,7 +321,7 @@ public class AdjustSensitivityDialog< T extends RealType< T > & NativeType< T > 
 	private void computeCircles()
 	{
 		final ImagePlus imp = legacyService.getImageMap().lookupImagePlus( source );
-		final ImagePlus newImp = new ImagePlus( "Slice - " + imp.getShortTitle(),
+		this.newImp = new ImagePlus( "Preview - " + imp.getShortTitle(),
 				imp.getProcessor().duplicate() );
 		final Img< T > slice = ImageJFunctions.wrap( newImp );
 
@@ -276,9 +329,33 @@ public class AdjustSensitivityDialog< T extends RealType< T > & NativeType< T > 
 
 		@SuppressWarnings( "unchecked" )
 		final CircleSkinnerOp< T > circleSkinner = ( CircleSkinnerOp< T > ) Computers.unary( opService, CircleSkinnerOp.class, ResultsTable.class,
-				Dataset.class, circleThickness, thresholdFactor, MAX_SENSITIVITY, minRadius, maxRadius, stepRadius, false );
+				Dataset.class, circleThickness, thresholdFactor, CircleSkinnerGUI.MAX_SENSITIVITY, minRadius, maxRadius, stepRadius, false );
 		final Dataset dataset = new DefaultDataset( context, new ImgPlus<>( slice ) );
 		circleSkinner.compute( dataset, table );
+		final Map< Integer, List< HoughCircle > > circles = circleSkinner.getCircles();
+
+		/*
+		 * Collect sensitivity values.
+		 */
+
+		final List< HoughCircle > c = circles.get( Integer.valueOf( 0 ) );
+		if ( null == c || c.isEmpty() )
+		{
+			this.sensitivities = new double[] { CircleSkinnerGUI.MAX_SENSITIVITY };
+		}
+		else
+		{
+			this.sensitivities = new double[ c.size() ];
+			for ( int i = 0; i < sensitivities.length; i++ )
+				sensitivities[ i ] = c.get( i ).getSensitivity();
+		}
+
+		createHistogram( sensitivities );
+		pack();
+
+		/*
+		 * Show circle overlay.
+		 */
 
 		newImp.show();
 		Overlay overlay = newImp.getOverlay();
@@ -287,10 +364,10 @@ public class AdjustSensitivityDialog< T extends RealType< T > & NativeType< T > 
 			overlay = new Overlay();
 			newImp.setOverlay( overlay );
 		}
-		final HoughCircleOverlay circleOverlay = new HoughCircleOverlay( newImp, sensitivity );
+		this.circleOverlay = new HoughCircleOverlay( newImp, CircleSkinnerGUI.MAX_SENSITIVITY );
 		overlay.add( circleOverlay, "Hough circles" );
-		final Map< Integer, List< HoughCircle > > circles = circleSkinner.getCircles();
 		circleOverlay.setCircles( circles );
+		circleOverlay.setSensitivity( sensitivity );
 
 		/*
 		 * Setup window.
@@ -313,4 +390,83 @@ public class AdjustSensitivityDialog< T extends RealType< T > & NativeType< T > 
 		}
 		newImp.getWindow().setLocation( x, y );
 	}
+
+	private ChartPanel createHistogram( final double[] sensitivities )
+	{
+		final HistogramDataset dataset = new HistogramDataset();
+		dataset.setType( HistogramType.RELATIVE_FREQUENCY );
+		dataset.addSeries( "Sensitivities", sensitivities, 50 );
+		final String plotTitle = null; // "Sensitivity histogram";
+		final String xaxis = "Sensitivity";
+		final String yaxis = "#";
+		final PlotOrientation orientation = PlotOrientation.VERTICAL;
+		final boolean show = false;
+		final boolean toolTips = false;
+		final boolean urls = false;
+		final JFreeChart chart = ChartFactory.createHistogram( plotTitle, xaxis, yaxis,
+				dataset, orientation, show, toolTips, urls );
+		chart.setBackgroundPaint( this.getBackground() );
+
+		final XYPlot plot = chart.getXYPlot();
+		final XYBarRenderer renderer = ( XYBarRenderer ) plot.getRenderer();
+		renderer.setShadowVisible( false );
+		renderer.setMargin( 0 );
+		renderer.setBarPainter( new StandardXYBarPainter() );
+		renderer.setDrawBarOutline( true );
+		renderer.setSeriesOutlinePaint( 0, Color.BLACK );
+		renderer.setSeriesPaint( 0, new Color( 1, 1, 1, 0 ) );
+
+		plot.setBackgroundPaint( new Color( 1, 1, 1, 0 ) );
+		plot.setOutlineVisible( false );
+		plot.setDomainCrosshairVisible( false );
+		plot.setDomainGridlinesVisible( false );
+		plot.setRangeCrosshairVisible( false );
+		plot.setRangeGridlinesVisible( false );
+
+		plot.getRangeAxis().setVisible( false );
+		plot.getDomainAxis().setVisible( true );
+		plot.getDomainAxis().setRange( CircleSkinnerGUI.MIN_SENSITIVITY, CircleSkinnerGUI.MAX_SENSITIVITY );
+
+		chart.setBorderVisible( false );
+		chart.setBackgroundPaint( new Color( 0.6f, 0.6f, 0.7f ) );
+
+		intervalMarker = new IntervalMarker( CircleSkinnerGUI.MIN_SENSITIVITY, sensitivity,
+				new Color( 0.3f, 0.5f, 0.8f ), new BasicStroke(), new Color( 0, 0, 0.5f ), new BasicStroke( 1.5f ), 0.5f );
+		plot.addDomainMarker( intervalMarker );
+
+		final ChartPanel panel = new ChartPanel( chart );
+		panel.setPreferredSize( new Dimension( 0, 0 ) );;
+
+		final GridBagConstraints gbc_histoPanel = new GridBagConstraints();
+		gbc_histoPanel.gridwidth = 1;
+		gbc_histoPanel.insets = new Insets( 5, 5, 5, 5 );
+		gbc_histoPanel.fill = GridBagConstraints.BOTH;
+		gbc_histoPanel.gridx = 1;
+		gbc_histoPanel.gridy = 1;
+		panelAdjustments.add( panel, gbc_histoPanel );
+
+		return panel;
+	}
+
+	private void refreshOverlay()
+	{
+		circleOverlay.setSensitivity( sensitivity );
+		newImp.updateAndDraw();
+		intervalMarker.setEndValue( sensitivity );
+
+		int nCircles = 0;
+		for ( final double s : sensitivities )
+		{
+			if ( s < sensitivity )
+				nCircles++;
+		}
+		lblInfo.setText( String.format( "Retain %d %s out of %d.",
+				nCircles, nCircles == 1 ? "circle" : "circles", sensitivities.length ) );
+	}
+
+	public double getSensitivity()
+	{
+		return sensitivity;
+	}
+
 }
