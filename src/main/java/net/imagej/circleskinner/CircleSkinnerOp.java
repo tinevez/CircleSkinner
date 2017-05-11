@@ -27,6 +27,7 @@ import net.imagej.ops.special.function.Functions;
 import net.imagej.ops.special.inplace.Inplaces;
 import net.imglib2.IterableInterval;
 import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.histogram.Histogram1d;
 import net.imglib2.img.Img;
 import net.imglib2.type.logic.BitType;
 import net.imglib2.type.numeric.RealType;
@@ -50,7 +51,7 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 	private static final String CIRCLE_MEDIAN_COLUMN = "Median";
 	private static final String CIRCLE_THICKNESS_COLUMN = "Thickness (pixels)";
 	private static final String CIRCLE_THRESHOLD_COLUMN = "Threshold adj.";
-	private static final String CIRCLE_SENSITIVITY_COLUMN = "Sensitivity";
+	public static final String CIRCLE_SENSITIVITY_COLUMN = "Sensitivity";
 
 	/*
 	 * SERVICES.
@@ -76,7 +77,7 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 	 * The circle thickness (crown thickness), in pixel units.
 	 */
 	@Parameter( label = "Circle thickness", min = "1", type = ItemIO.INPUT )
-	private double circleThickness = 9.;
+	private int circleThickness = 9;
 
 	@Parameter( label = "Threshold adjustment", min = "1", type = ItemIO.INPUT, description = "By how much (in percent) to adjust the automatic Otsu threshold after segmentation of the filtered image." )
 	private double thresholdFactor = 100.;
@@ -85,13 +86,13 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 	private double sensitivity = 100.;
 
 	@Parameter( label = "Min circle radius (pixels)", min = "1", type = ItemIO.INPUT )
-	private double minRadius = 50.;
+	private int minRadius = 50;
 
 	@Parameter( label = "Max circle radius (pixels)", min = "1", type = ItemIO.INPUT )
-	private double maxRadius = 100.;
+	private int maxRadius = 100;
 
 	@Parameter( label = "Radius step (pixels)", min = "1", type = ItemIO.INPUT )
-	private double stepRadius = 2.;
+	private int stepRadius = 2;
 
 	@Parameter( label = "Show results table", required = false, type = ItemIO.INPUT )
 	private boolean showResultsTable = false;
@@ -215,7 +216,10 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 
 		statusService.showStatus( "Thresholding..." );
 
-		final IterableInterval< BitType > thresholded = ops.threshold().otsu( H );
+		final Histogram1d< DoubleType > histo = ops.image().histogram( H );
+		final DoubleType otsuThreshold = ops.threshold().otsu( histo );
+		otsuThreshold.mul( thresholdFactor / 100. );
+		final IterableInterval< BitType > thresholded = ops.threshold().apply( H, otsuThreshold );
 
 		/*
 		 * Hough transform
