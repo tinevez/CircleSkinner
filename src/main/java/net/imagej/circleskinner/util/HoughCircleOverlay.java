@@ -32,7 +32,7 @@ public class HoughCircleOverlay extends Roi
 	{
 		super( 0, 0, imp );
 		this.maxSensitivity = maxSensitivity;
-		this.minSensitivity = maxSensitivity / 2.;
+		this.minSensitivity = maxSensitivity / 10.;
 		this.circleMap = new HashMap<>();
 		this.sensitivity = maxSensitivity;
 	}
@@ -67,7 +67,6 @@ public class HoughCircleOverlay extends Roi
 		g2d.setStroke( new BasicStroke( ( float ) ( 1. / magnification ) ) );
 
 		final int c = imp.getC() - 1;
-		System.out.println( c ); // DEBUG
 		final AffineTransform transform = g2d.getTransform();
 		g2d.scale( magnification, magnification );
 		g2d.setFont( g2d.getFont().deriveFont( 18f ) );
