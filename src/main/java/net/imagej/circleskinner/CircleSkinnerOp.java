@@ -97,12 +97,20 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 	@Parameter( label = "Show results table", required = false, type = ItemIO.INPUT )
 	private boolean showResultsTable = false;
 
+	@Parameter( label = "Keep last vot image", required = false, type = ItemIO.INPUT )
+	private boolean doKeepVoteImg = false;
+
 	/*
 	 * OUTPUT PARAMETERS.
 	 */
 
 	@Parameter( label = "Detected circles", type = ItemIO.OUTPUT, description = "The map of detected circles per channel in the source image." )
 	private Map< Integer, List< HoughCircle > > circles;
+
+	/**
+	 * Storage for the vote image.
+	 */
+	private Img< DoubleType > voteImg;
 
 	/*
 	 * METHODS.
@@ -111,6 +119,11 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 	public Map< Integer, List< HoughCircle > > getCircles()
 	{
 		return circles;
+	}
+
+	public Img< DoubleType > getVoteImg()
+	{
+		return voteImg;
 	}
 
 	public static final ResultsTable createResulsTable()
@@ -122,6 +135,8 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 	@Override
 	public void compute( final Dataset source, ResultsTable table )
 	{
+		voteImg = null;
+
 		if ( null == table )
 			table = createResulsTable();
 
@@ -159,6 +174,9 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 				appendResults( circ, table, source.getName(), c + 1 );
 			}
 		}
+
+		if ( !doKeepVoteImg )
+			voteImg = null;
 	}
 
 	private void appendResults( final List< HoughCircle > circles, final ResultsTable table, final String name, final int channelNumber )
@@ -231,7 +249,11 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 		final HoughTransformOp< BitType > houghTransformOp =
 				( HoughTransformOp ) Functions.unary( ops, HoughTransformOp.class, RandomAccessibleInterval.class,
 						thresholded, minRadius, maxRadius, stepRadius );
-		final Img< DoubleType > voteImg = houghTransformOp.calculate( thresholded );
+
+		if ( null == voteImg )
+			voteImg = houghTransformOp.createOutput( thresholded );
+
+		houghTransformOp.compute( thresholded, voteImg );
 
 		/*
 		 * Detect maxima on vote image.
