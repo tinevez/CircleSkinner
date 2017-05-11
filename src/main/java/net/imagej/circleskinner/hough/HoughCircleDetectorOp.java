@@ -25,7 +25,7 @@ public class HoughCircleDetectorOp< T extends RealType< T > & NativeType< T > >
 		extends AbstractUnaryFunctionOp< RandomAccessibleInterval< T >, List< HoughCircle > >
 {
 
-	private static final double K = 1.6;
+	private static final double K = 1.1; // 1.6;
 
 	@Parameter
 	private ThreadService threadService;

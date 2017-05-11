@@ -101,9 +101,9 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 
 	static final int MIN_THRESHOLD = 10;
 
-	static final int MAX_SENSITIVITY = 500;
+	static final int MAX_SENSITIVITY = 5000; // 500;
 
-	static final int MIN_SENSITIVITY = 10;
+	static final int MIN_SENSITIVITY = 100; // 10;
 
 	/*
 	 * SERVICES.
@@ -384,8 +384,8 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		parametersPanel.add( lblCircleDetectionSensitivity, gbc_lblCircleDetectionSensitivity );
 
 		final JSlider sliderSensitivity = new JSlider();
-		sliderSensitivity.setMinorTickSpacing( 25 );
-		sliderSensitivity.setMajorTickSpacing( 100 );
+		sliderSensitivity.setMinorTickSpacing( 250 );
+		sliderSensitivity.setMajorTickSpacing( 1000 );
 		sliderSensitivity.setPaintLabels( true );
 		sliderSensitivity.setPaintTicks( true );
 		sliderSensitivity.setMaximum( MAX_SENSITIVITY );
