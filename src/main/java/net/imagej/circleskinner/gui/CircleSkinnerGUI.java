@@ -79,7 +79,7 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 
 	public static final String PLUGIN_NAME = "CircleSkinner";
 
-	public static final String PLUGIN_VERSION = "1.0.1-SNAPSHOT";
+	public static final String PLUGIN_VERSION = "1.1.0";
 
 	private static final int DEFAULT_MIN_RADIUS = 50;
 
