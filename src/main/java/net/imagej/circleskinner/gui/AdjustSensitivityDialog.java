@@ -241,8 +241,8 @@ public class AdjustSensitivityDialog< T extends RealType< T > & NativeType< T > 
 		sliderSensitivity.setPaintLabels( true );
 		sliderSensitivity.setMaximum( CircleSkinnerGUI.MAX_SENSITIVITY );
 		sliderSensitivity.setMinimum( CircleSkinnerGUI.MIN_SENSITIVITY );
-		sliderSensitivity.setMinorTickSpacing( 250 );
-		sliderSensitivity.setMajorTickSpacing( 1000 );
+		sliderSensitivity.setMinorTickSpacing( 25 );
+		sliderSensitivity.setMajorTickSpacing( 100 );
 		sliderSensitivity.setPaintTicks( true );
 		sliderSensitivity.setValue( ( int ) sensitivity );
 		final GridBagConstraints gbc_sliderSensitivity = new GridBagConstraints();
@@ -354,10 +354,11 @@ public class AdjustSensitivityDialog< T extends RealType< T > & NativeType< T > 
 
 		final ResultsTable table = CircleSkinnerOp.createResulsTable();
 
+		final Dataset dataset = new DefaultDataset( context, new ImgPlus<>( slice ) );
 		final boolean keepVoteImg = true;
 		@SuppressWarnings( "unchecked" )
 		final CircleSkinnerOp< T > circleSkinner = ( CircleSkinnerOp< T > ) Computers.unary( opService, CircleSkinnerOp.class, ResultsTable.class,
-				Dataset.class,
+				dataset,
 				circleThickness,
 				thresholdFactor,
 				CircleSkinnerGUI.MAX_SENSITIVITY,
@@ -366,7 +367,6 @@ public class AdjustSensitivityDialog< T extends RealType< T > & NativeType< T > 
 				stepRadius,
 				false,
 				keepVoteImg );
-		final Dataset dataset = new DefaultDataset( context, new ImgPlus<>( slice ) );
 		circleSkinner.compute( dataset, table );
 
 		final Map< Integer, List< HoughCircle > > circles = circleSkinner.getCircles();
