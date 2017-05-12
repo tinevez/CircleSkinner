@@ -252,6 +252,9 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 
 		if ( null == voteImg )
 			voteImg = houghTransformOp.createOutput( thresholded );
+		else
+			for ( final DoubleType p : voteImg )
+				p.setZero();
 
 		houghTransformOp.compute( thresholded, voteImg );
 
