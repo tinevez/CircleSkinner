@@ -73,12 +73,15 @@ public class HoughCircleDetectorOp< T extends RealType< T > & NativeType< T > >
 		for ( final RefinedPeak< Point > peak : refined )
 		{
 			// Minima are negative.
+			final double radius = minRadius + ( peak.getDoublePosition( numDimensions - 1 ) ) * stepRadius;
+			final double ls = -2. * Math.PI * radius * circleThickness / peak.getValue();
+			if ( ls > sensitivity || ls <= 0 )
+				continue;
+
 			final RealPoint center = new RealPoint( numDimensions - 1 );
 			for ( int d = 0; d < numDimensions - 1; d++ )
 				center.setPosition( peak.getDoublePosition( d ), d );
 
-			final double radius = minRadius + ( peak.getDoublePosition( numDimensions - 1 ) ) * stepRadius;
-			final double ls = -2. * Math.PI * minRadius * circleThickness / peak.getValue();
 			circles.add( new HoughCircle( center, radius, circleThickness, ls ) );
 		}
 
