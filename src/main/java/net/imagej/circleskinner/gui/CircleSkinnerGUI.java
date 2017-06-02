@@ -439,7 +439,7 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		gbc_lblMinMax.gridy = 6;
 		parametersPanel.add( lblMinMax, gbc_lblMinMax );
 
-		final JSpinner spinnerMinRadius = new JSpinner( new SpinnerNumberModel( minRadius, 10, 300, 2 ) );
+		final JSpinner spinnerMinRadius = new JSpinner( new SpinnerNumberModel( minRadius, 5, 300, 2 ) );
 		final GridBagConstraints gbc_spinnerMinRadius = new GridBagConstraints();
 		gbc_spinnerMinRadius.fill = GridBagConstraints.HORIZONTAL;
 		gbc_spinnerMinRadius.insets = new Insets( 0, 0, 5, 5 );
@@ -447,7 +447,7 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		gbc_spinnerMinRadius.gridy = 6;
 		parametersPanel.add( spinnerMinRadius, gbc_spinnerMinRadius );
 
-		final JSpinner spinnerMaxRadius = new JSpinner( new SpinnerNumberModel( maxRadius, 10, 300, 2 ) );
+		final JSpinner spinnerMaxRadius = new JSpinner( new SpinnerNumberModel( maxRadius, 5, 300, 2 ) );
 		final GridBagConstraints gbc_spinnerMaxRadius = new GridBagConstraints();
 		gbc_spinnerMaxRadius.fill = GridBagConstraints.HORIZONTAL;
 		gbc_spinnerMaxRadius.insets = new Insets( 0, 0, 5, 0 );
@@ -455,7 +455,7 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		gbc_spinnerMaxRadius.gridy = 6;
 		parametersPanel.add( spinnerMaxRadius, gbc_spinnerMaxRadius );
 
-		final RangeSlider rangeSlider = new RangeSlider( 10, 300, minRadius, maxRadius );
+		final RangeSlider rangeSlider = new RangeSlider( 5, 300, minRadius, maxRadius );
 		rangeSlider.setMinorTickSpacing( 25 );
 		rangeSlider.setMajorTickSpacing( 100 );
 		rangeSlider.setPaintLabels( true );
@@ -754,7 +754,7 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 			break;
 		}
 		messages.add( String.format( " - Circle thickness (pixels): %d", circleThickness ) );
-		messages.add( String.format( " - Threshold adjusment: %.1f %%", thresholdFactor ) );
+		messages.add( String.format( " - Threshold adjustment: %.1f %%", thresholdFactor ) );
 		messages.add( String.format( " - Sensitivity: %.1f", sensitivity ) );
 		messages.add( String.format( " - Min. radius (pixels): %d", minRadius ) );
 		messages.add( String.format( " - Max. radius (pixels): %d", maxRadius ) );
