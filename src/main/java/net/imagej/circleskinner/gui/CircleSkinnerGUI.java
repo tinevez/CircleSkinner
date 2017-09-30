@@ -883,6 +883,10 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		messages.add( String.format( " - Min. radius (pixels): %d", minRadius ) );
 		messages.add( String.format( " - Max. radius (pixels): %d", maxRadius ) );
 		messages.add( String.format( " - Step radius (pixels): %d", stepRadius ) );
+		if ( maxNDetections == Integer.MAX_VALUE )
+			messages.add( " - Do not limit the number of detections" );
+		else
+			messages.add( String.format( " - Limit the number of detections to: %d", maxNDetections ) );
 		messages.add( "" );
 
 		final long start = System.currentTimeMillis();
