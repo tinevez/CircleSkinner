@@ -37,6 +37,14 @@ public class HoughCircle extends RealPoint implements Comparable< HoughCircle >
 		return String.format( "%s\tR=%.1f\t±\t %.1f\tSensitivity=%.1f", sb.toString(), radius, thickness / 2., sensitivity );
 	}
 
+	public HoughCircle copy()
+	{
+		final HoughCircle c = new HoughCircle( this, radius, thickness, sensitivity );
+		if ( null != stats )
+			c.setStats( stats.mean, stats.std, stats.N, stats.median );
+		return c;
+	}
+
 	public double getRadius()
 	{
 		return radius;
