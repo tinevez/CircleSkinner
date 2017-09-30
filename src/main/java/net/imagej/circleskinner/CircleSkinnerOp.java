@@ -1,5 +1,7 @@
 package net.imagej.circleskinner;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -72,6 +74,12 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 	/*
 	 * INPUT PARAMETERS.
 	 */
+
+	/**
+	 * The segmentation channel index, 1-based (first is 0).
+	 */
+	@Parameter( label = "Segmentation channel", min = "0", type = ItemIO.INPUT )
+	private long segmentationChannel = 1;
 
 	/**
 	 * The circle thickness (crown thickness), in pixel units.
@@ -156,30 +164,56 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 			}
 		}
 
-		// Process each channel.
+
+		// Process proper channel.
 		if (cId < 0)
 		{
-			final List< HoughCircle > circ = processChannel( img.getImg() );
+			final List< HoughCircle > circ = segmentCircles( img.getImg() );
+			analyzeCircles( img.getImg(), circ );
 			circles.put( Integer.valueOf( 0 ), circ );
 			appendResults( circ, table, source.getName(), 1 );
 		}
 		else
 		{
+			final long nChannels = img.dimension( cId );
+			final long targetChannel = ( segmentationChannel > nChannels ) ? 0 : segmentationChannel;
+
+			/*
+			 * Detect circles in target channel.
+			 */
+
+			@SuppressWarnings( "unchecked" )
+			final IntervalView< T > segmentationChannel = ( IntervalView< T > ) Views.hyperSlice( source.getImgPlus().getImg(), cId, targetChannel );
+			final List< HoughCircle > circ = segmentCircles( segmentationChannel );
+
+			/*
+			 * Measure in all channels.
+			 */
+
 			for ( int c = 0; c < source.getChannels(); c++ )
 			{
 				@SuppressWarnings( "unchecked" )
-				final IntervalView< T > channel = ( IntervalView< T > ) Views.hyperSlice( source.getImgPlus().getImg(), cId, c );
-				final List< HoughCircle > circ = processChannel( channel );
-				circles.put( Integer.valueOf( c ), circ );
-				appendResults( circ, table, source.getName(), c + 1 );
+				final IntervalView< T > analysisChannel = ( IntervalView< T > ) Views.hyperSlice( source.getImgPlus().getImg(), cId, c );
+
+				// Duplicate circles.
+				final List< HoughCircle > circDuplicate = new ArrayList<>( circ.size() );
+				for ( final HoughCircle circle : circ )
+					circDuplicate.add( circle.copy() );
+
+				// Analyze.
+				analyzeCircles( analysisChannel, circDuplicate );
+
+				circles.put( Integer.valueOf( c ), circDuplicate );
+				appendResults( circDuplicate, table, source.getName(), c + 1 );
 			}
 		}
 
+		statusService.clearStatus();
 		if ( !doKeepVoteImg )
 			voteImg = null;
 	}
 
-	private void appendResults( final List< HoughCircle > circles, final ResultsTable table, final String name, final int channelNumber )
+	private void appendResults( final List< HoughCircle > circles, final ResultsTable table, final String name, final long channel )
 	{
 		int circleId = 0;
 		for ( final HoughCircle circle : circles )
@@ -187,7 +221,7 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 			table.incrementCounter();
 
 			table.addValue( SOURCE_NAME_COLUMN, name );
-			table.addValue( CHANEL_COLUMN, channelNumber );
+			table.addValue( CHANEL_COLUMN, channel );
 
 			table.addValue( CIRCLE_ID_COLUMN, ++circleId );
 			table.addValue( CIRCLE_X_COLUMN, circle.getDoublePosition( 0 ) );
@@ -212,9 +246,18 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 		}
 	}
 
-	private List< HoughCircle > processChannel( final RandomAccessibleInterval< T > channel )
+	/**
+	 * Segments the specified channel and find the circles it contains according
+	 * to the parameters of this Op. The {@link HoughCircle} objects have not
+	 * been analyzed yet.
+	 *
+	 * @param segmentationChannel
+	 *            the channel to segment as a RAI.
+	 * @return the list of circles ordered by increasing sensitivity.
+	 */
+	private List< HoughCircle > segmentCircles( final RandomAccessibleInterval< T > segmentationChannel )
 	{
-		final double sigma = circleThickness / 2. / Math.sqrt( channel.numDimensions() );
+		final double sigma = circleThickness / 2. / Math.sqrt( segmentationChannel.numDimensions() );
 
 		/*
 		 * Filter using tubeness.
@@ -225,8 +268,8 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 		@SuppressWarnings( { "rawtypes", "unchecked" } )
 		final TubenessOp< T > tubenessOp =
 				( TubenessOp ) Functions.unary( ops, TubenessOp.class, RandomAccessibleInterval.class,
-						channel, sigma, Util.getArrayFromValue( 1., channel.numDimensions() ) );
-		final Img< DoubleType > H = tubenessOp.calculate( channel );
+						segmentationChannel, sigma, Util.getArrayFromValue( 1., segmentationChannel.numDimensions() ) );
+		final Img< DoubleType > H = tubenessOp.calculate( segmentationChannel );
 
 		/*
 		 * Threshold with Otsu.
@@ -269,16 +312,26 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 				( HoughCircleDetectorOp ) Functions.unary( ops, HoughCircleDetectorOp.class, List.class,
 						voteImg, circleThickness, minRadius, stepRadius, sensitivity );
 		final List< HoughCircle > circles = houghDetectOp.calculate( voteImg );
+		return circles;
+	}
 
-		/*
-		 * Analyze circles.
-		 */
-		
+	/**
+	 * Gets measurements results for the specified circles on the specified
+	 * channel. The {@link HoughCircle.Stats} value of each circle is altered.
+	 * Other fields are left untouched.
+	 *
+	 * @param analysisChannel
+	 *            the channel to use for pixel value measurement.
+	 * @param circles
+	 *            the circles to analyse.
+	 */
+	private void analyzeCircles(final RandomAccessibleInterval< T > analysisChannel, final Collection<HoughCircle> circles)
+	{
+		statusService.showStatus( "Analysing circles..." );
+
 		@SuppressWarnings( { "rawtypes", "unchecked" } )
 		final CircleAnalyzerOp< T > circleAnalyzerOp =
-				( CircleAnalyzerOp ) Inplaces.binary1( ops, CircleAnalyzerOp.class, circles, channel );
+				( CircleAnalyzerOp ) Inplaces.binary1( ops, CircleAnalyzerOp.class, circles, analysisChannel );
 		circleAnalyzerOp.run();
-
-		return circles;
 	}
 }
