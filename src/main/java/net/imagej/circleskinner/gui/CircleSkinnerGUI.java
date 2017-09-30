@@ -629,8 +629,8 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 			{
 				limitDetectionNumber = chckbxLimitNumberOf.isSelected();
 				prefs.put( CircleSkinnerGUI.class, "limitDetectionNumber", limitDetectionNumber );
-				spinnerMaxNDetections.setEnabled( limitDetectionNumber );
-				sliderMaxNDetections.setEnabled( limitDetectionNumber );
+				sliderMaxNDetections.setEnabled( chckbxAdvancedParameters.isSelected() && chckbxLimitNumberOf.isSelected() );
+				spinnerMaxNDetections.setEnabled( chckbxAdvancedParameters.isSelected() && chckbxLimitNumberOf.isSelected() );
 			}
 		} );
 
@@ -1072,6 +1072,7 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 
 		final AdjustSensitivityDialog< T > adjustSensitivityDialog = new AdjustSensitivityDialog<>(
 				imageDisplayService.getActiveImageDisplay(),
+				segmentationChannel - 1l,
 				circleThickness,
 				thresholdFactor,
 				sensitivity,
@@ -1126,6 +1127,8 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 
 	private Map< Integer, List< HoughCircle > > processImage( final Dataset dataset, final ResultsTable resultsTable )
 	{
+		final int maxND = limitDetectionNumber ? maxNDetections : Integer.MAX_VALUE;
+
 		@SuppressWarnings( "unchecked" )
 		final CircleSkinnerOp< T > circleSkinner = ( CircleSkinnerOp< T > ) Computers.unary( opService, CircleSkinnerOp.class, resultsTable,
 				dataset,
@@ -1136,6 +1139,7 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 				minRadius,
 				maxRadius,
 				stepRadius,
+				maxND,
 				true,
 				false );
 		circleSkinner.compute( dataset, resultsTable );

@@ -96,6 +96,11 @@ public class AdjustSensitivityDialog< T extends RealType< T > & NativeType< T > 
 	private ImageDisplay source;
 
 	/**
+	 * The segmentation channel index, 1-based (first is 0).
+	 */
+	private final long segmentationChannel;
+
+	/**
 	 * The circle thickness (crown thickness), in pixel units.
 	 */
 	private final int circleThickness;
@@ -143,6 +148,7 @@ public class AdjustSensitivityDialog< T extends RealType< T > & NativeType< T > 
 	 */
 
 	public AdjustSensitivityDialog( final ImageDisplay source,
+			final long segmentationChannel,
 			final int circleThickness,
 			final double thresholdFactor,
 			final double sensitivity,
@@ -152,6 +158,7 @@ public class AdjustSensitivityDialog< T extends RealType< T > & NativeType< T > 
 			final Context context )
 	{
 		this.source = source;
+		this.segmentationChannel = segmentationChannel;
 		this.circleThickness = circleThickness;
 		this.thresholdFactor = thresholdFactor;
 		this.sensitivity = sensitivity;
@@ -359,18 +366,20 @@ public class AdjustSensitivityDialog< T extends RealType< T > & NativeType< T > 
 		@SuppressWarnings( "unchecked" )
 		final CircleSkinnerOp< T > circleSkinner = ( CircleSkinnerOp< T > ) Computers.unary( opService, CircleSkinnerOp.class, ResultsTable.class,
 				dataset,
+				segmentationChannel,
 				circleThickness,
 				thresholdFactor,
-				CircleSkinnerGUI.MAX_SENSITIVITY,
+				( double ) CircleSkinnerGUI.MAX_SENSITIVITY,
 				minRadius,
 				maxRadius,
 				stepRadius,
+				Integer.MAX_VALUE,
 				false,
 				keepVoteImg );
 		circleSkinner.compute( dataset, table );
 
 		final Map< Integer, List< HoughCircle > > circles = circleSkinner.getCircles();
-		this.voteImg = new ImgPlus<>( circleSkinner.getVoteImg(), "Vote image", 
+		this.voteImg = new ImgPlus<>( circleSkinner.getVoteImg(), "Vote image",
 				new AxisType[] { Axes.X, Axes.Y, Axes.Z } );
 
 		/*
