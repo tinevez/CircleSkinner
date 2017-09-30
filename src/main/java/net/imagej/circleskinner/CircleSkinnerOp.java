@@ -102,10 +102,13 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 	@Parameter( label = "Radius step (pixels)", min = "1", type = ItemIO.INPUT )
 	private int stepRadius = 2;
 
+	@Parameter( label = "Max number of detections", min = "0", type = ItemIO.INPUT )
+	private int maxNDetections = Integer.MAX_VALUE;
+
 	@Parameter( label = "Show results table", required = false, type = ItemIO.INPUT )
 	private boolean showResultsTable = false;
 
-	@Parameter( label = "Keep last vot image", required = false, type = ItemIO.INPUT )
+	@Parameter( label = "Keep last vote image", required = false, type = ItemIO.INPUT )
 	private boolean doKeepVoteImg = false;
 
 	/*
@@ -311,7 +314,15 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 		final HoughCircleDetectorOp< DoubleType > houghDetectOp =
 				( HoughCircleDetectorOp ) Functions.unary( ops, HoughCircleDetectorOp.class, List.class,
 						voteImg, circleThickness, minRadius, stepRadius, sensitivity );
-		final List< HoughCircle > circles = houghDetectOp.calculate( voteImg );
+		List< HoughCircle > circles = houghDetectOp.calculate( voteImg );
+
+		/*
+		 * Limit number of detections.
+		 */
+
+		if ( circles.size() > maxNDetections )
+			circles = new ArrayList<>( circles.subList( 0, maxNDetections ) );
+
 		return circles;
 	}
 
