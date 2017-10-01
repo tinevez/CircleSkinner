@@ -46,6 +46,7 @@ import org.scijava.log.LogService;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 import org.scijava.prefs.PrefService;
+import org.scijava.ui.UIService;
 
 import com.jidesoft.swing.RangeSlider;
 
@@ -120,6 +121,9 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 	 */
 
 	@Parameter
+	private UIService uiService;
+
+	@Parameter
 	private DisplayService displayService;
 
 	@Parameter
@@ -142,12 +146,6 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 
 	@Parameter
 	private LogService log;
-
-//	@Parameter
-//	private CommandService commandService;
-
-//	@Parameter
-//	private ThreadService threadService;
 
 	/*
 	 * FIELDS
@@ -856,14 +854,19 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		pack();
 		setVisible( true );
 	}
+
 	private void process()
 	{
-		@SuppressWarnings( "unchecked" )
-		final Display< String > m = ( Display< String > ) displayService.createDisplay(
-				"CircleSkinner log", PLUGIN_NAME + " v" + PLUGIN_VERSION );
-		this.messages = m;
+		// Determine if we need to create a new log window.
+		if ( null == messages || null == uiService.getDisplayViewer( messages ) )
+		{
+			@SuppressWarnings( "unchecked" )
+			final Display< String > m = ( Display< String > ) displayService.createDisplay( "CircleSkinner log", PLUGIN_NAME + " v" + PLUGIN_VERSION );
+			this.messages = m;
+		}
 
 		messages.add( "" );
+		messages.add( "____________________________________" );
 		messages.add( PLUGIN_NAME + " started on " + SimpleDateFormat.getInstance().format( new Date() ) );
 		switch ( analysisTarget )
 		{
