@@ -11,7 +11,9 @@ import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -941,6 +943,38 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		messages.add( "" );
 		messages.add( String.format( "CircleSkinner completed in %.1f min.", ( end - start ) / 60000. ) );
 		messages.update();
+
+		/*
+		 * Automatically save results table and log in folder mode.
+		 */
+
+		switch ( analysisTarget )
+		{
+		case CURRENT_IMAGE:
+			break;
+		case FOLDER:
+		{
+			final File logFile = new File( folder, "log.txt" );
+			try (final PrintWriter writer = new PrintWriter( logFile ))
+			{
+				for ( final String line : messages )
+					writer.println( line );
+			}
+			catch ( final FileNotFoundException e )
+			{
+				messages.add( String.format( "\nERROR: Could not save to log file %s. Error is:\n" + e.getMessage(), logFile.getAbsolutePath() ) );
+				e.printStackTrace();
+			}
+
+			final File resultsFile = new File( folder, "results.csv" );
+			resultsTable.save( resultsFile.getAbsolutePath() );
+
+			break;
+		}
+		default:
+			break;
+
+		}
 	}
 
 	@SuppressWarnings( "unchecked" )
@@ -1211,9 +1245,9 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		final ImageJ ij = new ImageJ();
 		ij.launch( args );
 		final Object dataset = ij.io().open( "samples/ca-01.lsm" );
-		final Object dataset2 = ij.io().open( "samples/mg-20.lsm" );
+//		final Object dataset2 = ij.io().open( "samples/mg-20.lsm" );
 		ij.ui().show( dataset );
-		ij.ui().show( dataset2 );
+//		ij.ui().show( dataset2 );
 		ij.command().run( CircleSkinnerGUI.class, true );
 	}
 }
