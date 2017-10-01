@@ -205,6 +205,7 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 	@Override
 	public void run()
 	{
+		setTitle( PLUGIN_NAME );
 
 		/*
 		 * Try to read parameters from Prefs.
@@ -348,7 +349,7 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		final JLabel lblCircleThicknesspixels = new JLabel( "Circle thickness (pixels)" );
 		final GridBagConstraints gbc_lblCircleThicknesspixels = new GridBagConstraints();
 		gbc_lblCircleThicknesspixels.anchor = GridBagConstraints.EAST;
-		gbc_lblCircleThicknesspixels.insets = new Insets( 0, 5, 5, 5 );
+		gbc_lblCircleThicknesspixels.insets = new Insets( 5, 5, 5, 5 );
 		gbc_lblCircleThicknesspixels.gridx = 0;
 		gbc_lblCircleThicknesspixels.gridy = 3;
 		parametersPanel.add( lblCircleThicknesspixels, gbc_lblCircleThicknesspixels );
@@ -372,7 +373,7 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		final JSpinner spinnerThickness = new JSpinner( new SpinnerNumberModel( circleThickness, MIN_THICKNESS, MAX_THICKNESS, 1 ) );
 		final GridBagConstraints gbc_spinnerThickness = new GridBagConstraints();
 		gbc_spinnerThickness.fill = GridBagConstraints.HORIZONTAL;
-		gbc_spinnerThickness.insets = new Insets( 5, 5, 5, 0 );
+		gbc_spinnerThickness.insets = new Insets( 5, 5, 5, 5 );
 		gbc_spinnerThickness.gridx = 3;
 		gbc_spinnerThickness.gridy = 3;
 		parametersPanel.add( spinnerThickness, gbc_spinnerThickness );
@@ -393,7 +394,7 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		final JLabel lblThresholdAdjustment = new JLabel( "Threshold adjustment (%)" );
 		final GridBagConstraints gbc_lblThresholdAdjustment = new GridBagConstraints();
 		gbc_lblThresholdAdjustment.anchor = GridBagConstraints.EAST;
-		gbc_lblThresholdAdjustment.insets = new Insets( 0, 5, 5, 5 );
+		gbc_lblThresholdAdjustment.insets = new Insets( 5, 5, 5, 5 );
 		gbc_lblThresholdAdjustment.gridx = 0;
 		gbc_lblThresholdAdjustment.gridy = 4;
 		parametersPanel.add( lblThresholdAdjustment, gbc_lblThresholdAdjustment );
@@ -417,7 +418,7 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		final JSpinner spinnerThreshold = new JSpinner( new SpinnerNumberModel( ( int ) thresholdFactor, MIN_THRESHOLD, MAX_THRESHOLD, 10 ) );
 		final GridBagConstraints gbc_spinnerThreshold = new GridBagConstraints();
 		gbc_spinnerThreshold.fill = GridBagConstraints.HORIZONTAL;
-		gbc_spinnerThreshold.insets = new Insets( 5, 5, 5, 0 );
+		gbc_spinnerThreshold.insets = new Insets( 5, 5, 5, 5 );
 		gbc_spinnerThreshold.gridx = 3;
 		gbc_spinnerThreshold.gridy = 4;
 		parametersPanel.add( spinnerThreshold, gbc_spinnerThreshold );
@@ -438,7 +439,7 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		final JLabel lblCircleDetectionSensitivity = new JLabel( "Circle detection sensitivity" );
 		final GridBagConstraints gbc_lblCircleDetectionSensitivity = new GridBagConstraints();
 		gbc_lblCircleDetectionSensitivity.anchor = GridBagConstraints.EAST;
-		gbc_lblCircleDetectionSensitivity.insets = new Insets( 0, 5, 5, 5 );
+		gbc_lblCircleDetectionSensitivity.insets = new Insets( 5, 5, 5, 5 );
 		gbc_lblCircleDetectionSensitivity.gridx = 0;
 		gbc_lblCircleDetectionSensitivity.gridy = 5;
 		parametersPanel.add( lblCircleDetectionSensitivity, gbc_lblCircleDetectionSensitivity );
@@ -461,7 +462,7 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 
 		final JSpinner spinnerSentivity = new JSpinner( new SpinnerNumberModel( ( int ) sensitivity, MIN_SENSITIVITY, MAX_SENSITIVITY, 10 ) );
 		final GridBagConstraints gbc_spinnerSentivity = new GridBagConstraints();
-		gbc_spinnerSentivity.insets = new Insets( 5, 5, 5, 0 );
+		gbc_spinnerSentivity.insets = new Insets( 5, 5, 5, 5 );
 		gbc_spinnerSentivity.fill = GridBagConstraints.HORIZONTAL;
 		gbc_spinnerSentivity.gridx = 3;
 		gbc_spinnerSentivity.gridy = 5;
@@ -494,7 +495,7 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		final JLabel lblMinMax = new JLabel( "Min & Max radius (pixels)" );
 		final GridBagConstraints gbc_lblMinMax = new GridBagConstraints();
 		gbc_lblMinMax.anchor = GridBagConstraints.EAST;
-		gbc_lblMinMax.insets = new Insets( 0, 5, 5, 5 );
+		gbc_lblMinMax.insets = new Insets( 5, 5, 5, 5 );
 		gbc_lblMinMax.gridx = 0;
 		gbc_lblMinMax.gridy = 7;
 		parametersPanel.add( lblMinMax, gbc_lblMinMax );
@@ -510,7 +511,7 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		final JSpinner spinnerMaxRadius = new JSpinner( new SpinnerNumberModel( maxRadius, 5, 300, 2 ) );
 		final GridBagConstraints gbc_spinnerMaxRadius = new GridBagConstraints();
 		gbc_spinnerMaxRadius.fill = GridBagConstraints.HORIZONTAL;
-		gbc_spinnerMaxRadius.insets = new Insets( 5, 5, 5, 0 );
+		gbc_spinnerMaxRadius.insets = new Insets( 5, 5, 5, 5 );
 		gbc_spinnerMaxRadius.gridx = 3;
 		gbc_spinnerMaxRadius.gridy = 7;
 		parametersPanel.add( spinnerMaxRadius, gbc_spinnerMaxRadius );
@@ -556,7 +557,7 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		final JLabel lblStepRadiuspixels = new JLabel( "Step radius (pixels)" );
 		final GridBagConstraints gbc_lblStepRadiuspixels = new GridBagConstraints();
 		gbc_lblStepRadiuspixels.anchor = GridBagConstraints.EAST;
-		gbc_lblStepRadiuspixels.insets = new Insets( 0, 5, 5, 5 );
+		gbc_lblStepRadiuspixels.insets = new Insets( 5, 5, 5, 5 );
 		gbc_lblStepRadiuspixels.gridx = 0;
 		gbc_lblStepRadiuspixels.gridy = 8;
 		parametersPanel.add( lblStepRadiuspixels, gbc_lblStepRadiuspixels );
@@ -684,7 +685,7 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		final JLabel lblAdjustThreshold = new JLabel( "Adjust thickness and threshold." );
 		lblAdjustThreshold.setToolTipText( TOOLTIP_ADJUST_THRESHOLD );
 		final GridBagConstraints gbc_lblAdjustThreshold = new GridBagConstraints();
-		gbc_lblAdjustThreshold.insets = new Insets( 5, 5, 5, 0 );
+		gbc_lblAdjustThreshold.insets = new Insets( 5, 5, 5, 5 );
 		gbc_lblAdjustThreshold.anchor = GridBagConstraints.WEST;
 		gbc_lblAdjustThreshold.gridwidth = 3;
 		gbc_lblAdjustThreshold.gridx = 1;
@@ -702,7 +703,7 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 
 		final JLabel lblAdjustDetectionSensitivity = new JLabel( "Adjust detection sensitivity." );
 		final GridBagConstraints gbc_lblAdjustDetectionSensitivity = new GridBagConstraints();
-		gbc_lblAdjustDetectionSensitivity.insets = new Insets( 5, 5, 5, 0 );
+		gbc_lblAdjustDetectionSensitivity.insets = new Insets( 5, 5, 5, 5 );
 		gbc_lblAdjustDetectionSensitivity.gridwidth = 3;
 		gbc_lblAdjustDetectionSensitivity.anchor = GridBagConstraints.WEST;
 		gbc_lblAdjustDetectionSensitivity.gridx = 1;
@@ -764,7 +765,7 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		final JTextField textFieldFolder = new JTextField( folder.getAbsolutePath() );
 		textFieldFolder.setFont( panel.getFont().deriveFont( 10f ) );
 		final GridBagConstraints gbc_textFieldFolder = new GridBagConstraints();
-		gbc_textFieldFolder.insets = new Insets( 5, 5, 5, 0 );
+		gbc_textFieldFolder.insets = new Insets( 5, 5, 5, 5 );
 		gbc_textFieldFolder.gridwidth = 3;
 		gbc_textFieldFolder.fill = GridBagConstraints.HORIZONTAL;
 		gbc_textFieldFolder.gridx = 1;
@@ -785,7 +786,7 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		} );
 		chckbxSavePngs.setToolTipText( TOOLTIP_ADJUST_SAVE_PNG );
 		final GridBagConstraints gbc_chckbxSavePngs = new GridBagConstraints();
-		gbc_chckbxSavePngs.insets = new Insets( 5, 5, 5, 0 );
+		gbc_chckbxSavePngs.insets = new Insets( 5, 5, 5, 5 );
 		gbc_chckbxSavePngs.anchor = GridBagConstraints.WEST;
 		gbc_chckbxSavePngs.gridwidth = 3;
 		gbc_chckbxSavePngs.gridx = 1;
