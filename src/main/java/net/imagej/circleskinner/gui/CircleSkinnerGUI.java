@@ -51,6 +51,7 @@ import org.scijava.ui.UIService;
 import com.jidesoft.swing.RangeSlider;
 
 import ij.ImagePlus;
+import ij.WindowManager;
 import ij.gui.Overlay;
 import ij.measure.ResultsTable;
 import io.scif.FormatException;
@@ -84,6 +85,8 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 
 	public static final String PLUGIN_VERSION = "1.3.1-SNAPSHOT";
 
+	private static final String RESULTS_TABLE_TITLE = PLUGIN_NAME + " Results";
+
 	private static final long DEFAULT_SEGMENTATION_CHANNEL = 1l;
 
 	private static final int DEFAULT_MIN_RADIUS = 50;
@@ -115,6 +118,7 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 	private static final int DEFAULT_MAX_N_DETECTIONS = 20;
 
 	private static final int MAX_MAX_N_DETECTIONS = 100;
+
 
 	/*
 	 * SERVICES.
@@ -895,7 +899,8 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		messages.add( "" );
 
 		final long start = System.currentTimeMillis();
-		resultsTable = CircleSkinnerOp.createResulsTable();
+		if ( null == resultsTable || null == WindowManager.getWindow( RESULTS_TABLE_TITLE ) )
+			resultsTable = CircleSkinnerOp.createResulsTable();
 
 		switch ( analysisTarget )
 		{
@@ -942,7 +947,7 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 
 		final long end = System.currentTimeMillis();
 
-		resultsTable.show( PLUGIN_NAME + " Results" );
+		resultsTable.show( RESULTS_TABLE_TITLE );
 		messages.add( "" );
 		messages.add( String.format( "CircleSkinner completed in %.1f min.", ( end - start ) / 60000. ) );
 		messages.update();
