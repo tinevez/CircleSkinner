@@ -1172,6 +1172,10 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		{
 			// Do nothing.
 		}
+		catch ( final UnsupportedOperationException uoe )
+		{
+			// Do nothing.
+		}
 		return false;
 	}
 
@@ -1204,7 +1208,8 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		Locale.setDefault( Locale.ROOT );
 		UIManager.setLookAndFeel( UIManager.getSystemLookAndFeelClassName() );
 
-		final ImageJ ij = net.imagej.Main.launch( args );
+		final ImageJ ij = new ImageJ();
+		ij.launch( args );
 		final Object dataset = ij.io().open( "samples/ca-01.lsm" );
 		final Object dataset2 = ij.io().open( "samples/mg-20.lsm" );
 		ij.ui().show( dataset );
