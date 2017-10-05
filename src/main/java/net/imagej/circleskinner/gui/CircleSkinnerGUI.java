@@ -7,6 +7,7 @@ import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.Image;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -22,6 +23,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 import javax.swing.ButtonGroup;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComponent;
@@ -74,10 +76,12 @@ import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
 
-@Plugin( type = Command.class, menuPath = "Plugins > Circle Skinner", headless = false )
+@Plugin( type = Command.class, menuPath = "Plugins > Circle Skinner", headless = false, iconPath = "logo.png" )
 public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > extends JFrame implements Command
 {
 	private static final long serialVersionUID = 1L;
+
+	public static final ImageIcon LOGO = new ImageIcon( CircleSkinnerGUI.class.getResource( "logo.png" ) );
 
 	private static final String PNG_OUTPUT_FOLDER = "PNGs";
 
@@ -206,6 +210,7 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 	public void run()
 	{
 		setTitle( PLUGIN_NAME );
+		setIconImage( LOGO.getImage() );
 
 		/*
 		 * Try to read parameters from Prefs.
@@ -288,11 +293,12 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		final GridBagLayout gbl_parametersPanel = new GridBagLayout();
 		gbl_parametersPanel.columnWidths = new int[] { 100, 70, 100, 70 };
 		gbl_parametersPanel.columnWeights = new double[] { 0.1, 0.15, 0.6, 0.15 };
-		gbl_parametersPanel.rowHeights = new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 40, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+		gbl_parametersPanel.rowHeights = new int[] { 93, 0, 0, 0, 0, 0, 0, 0, 40, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 		gbl_parametersPanel.rowWeights = new double[] { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, };
 		parametersPanel.setLayout( gbl_parametersPanel );
 
 		final JLabel lblTitle = new JLabel( PLUGIN_NAME + " v" + PLUGIN_VERSION );
+		lblTitle.setIcon( new ImageIcon( LOGO.getImage().getScaledInstance( 32, 32, Image.SCALE_SMOOTH ) ) );
 		lblTitle.setFont( panel.getFont().deriveFont( Font.BOLD ).deriveFont( 15f ) );
 		final GridBagConstraints gbc_lblTitle = new GridBagConstraints();
 		gbc_lblTitle.gridwidth = 4;
