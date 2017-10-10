@@ -487,7 +487,7 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 			}
 		} );
 
-		final JCheckBox chckbxAdvancedParameters = new JCheckBox( "Advanced parameters:" );
+		final JLabel chckbxAdvancedParameters = new JLabel( "Advanced parameters:" );
 		chckbxAdvancedParameters.setFont( panel.getFont().deriveFont( Font.BOLD ).deriveFont( 13f ) );
 		chckbxAdvancedParameters.setHorizontalTextPosition( SwingConstants.LEFT );
 		final GridBagConstraints gbc_chckbxAdvancedParameters = new GridBagConstraints();
@@ -640,31 +640,8 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 			{
 				limitDetectionNumber = chckbxLimitNumberOf.isSelected();
 				prefs.put( CircleSkinnerGUI.class, "limitDetectionNumber", limitDetectionNumber );
-				sliderMaxNDetections.setEnabled( chckbxAdvancedParameters.isSelected() && chckbxLimitNumberOf.isSelected() );
-				spinnerMaxNDetections.setEnabled( chckbxAdvancedParameters.isSelected() && chckbxLimitNumberOf.isSelected() );
-			}
-		} );
-
-		final JComponent[] advancedParameterComponents = new JComponent[] { lblMinMax, rangeSlider,
-				lblStepRadiuspixels, spinnerStepRadius, spinnerMinRadius, spinnerMaxRadius,
-				chckbxLimitNumberOf };
-		for ( final JComponent component : advancedParameterComponents )
-			component.setEnabled( chckbxAdvancedParameters.isSelected() );
-
-		sliderMaxNDetections.setEnabled( chckbxAdvancedParameters.isSelected() && chckbxLimitNumberOf.isSelected() );
-		spinnerMaxNDetections.setEnabled( chckbxAdvancedParameters.isSelected() && chckbxLimitNumberOf.isSelected() );
-
-		chckbxAdvancedParameters.addActionListener( new ActionListener()
-		{
-
-			@Override
-			public void actionPerformed( final ActionEvent e )
-			{
-				for ( final JComponent component : advancedParameterComponents )
-					component.setEnabled( chckbxAdvancedParameters.isSelected() );
-
-				sliderMaxNDetections.setEnabled( chckbxAdvancedParameters.isSelected() && chckbxLimitNumberOf.isSelected() );
-				spinnerMaxNDetections.setEnabled( chckbxAdvancedParameters.isSelected() && chckbxLimitNumberOf.isSelected() );
+				sliderMaxNDetections.setEnabled( chckbxLimitNumberOf.isSelected() );
+				spinnerMaxNDetections.setEnabled( chckbxLimitNumberOf.isSelected() );
 			}
 		} );
 
