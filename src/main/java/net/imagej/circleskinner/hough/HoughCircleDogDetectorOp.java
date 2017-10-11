@@ -20,8 +20,8 @@ import net.imglib2.type.numeric.RealType;
 import net.imglib2.util.Util;
 import net.imglib2.view.Views;
 
-@Plugin( type = HoughCircleDetectorOp.class )
-public class HoughCircleDetectorOp< T extends RealType< T > & NativeType< T > >
+@Plugin( type = HoughCircleDogDetectorOp.class )
+public class HoughCircleDogDetectorOp< T extends RealType< T > & NativeType< T > >
 		extends AbstractUnaryFunctionOp< RandomAccessibleInterval< T >, List< HoughCircle > >
 {
 
