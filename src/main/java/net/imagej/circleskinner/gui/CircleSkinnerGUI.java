@@ -193,6 +193,8 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 
 	private Display< String > messages;
 
+	private CircleSkinnerOp< T > circleSkinner;
+
 	/*
 	 * CONSTRUCTOR.
 	 */
@@ -249,42 +251,55 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 			@Override
 			public void actionPerformed( final ActionEvent e )
 			{
-				final EverythingDisablerAndReenabler reenabler = new EverythingDisablerAndReenabler(
-						CircleSkinnerGUI.this, new Class[] { JLabel.class } );
-				reenabler.disable();
-				new SwingWorker< Boolean, String >()
+				if ( !btnRun.getText().toLowerCase().equals( "run" ) )
 				{
-
-					@Override
-					protected Boolean doInBackground() throws Exception
+					cancel();
+				}
+				else
+				{
+					final EverythingDisablerAndReenabler reenabler = new EverythingDisablerAndReenabler(
+							CircleSkinnerGUI.this, new Class[] { JLabel.class } );
+					reenabler.disable();
+					btnRun.setText( "Cancel" );
+					btnRun.setEnabled( true );
+					new SwingWorker< Boolean, String >()
 					{
-						CircleSkinnerGUI.this.process();
-						return Boolean.valueOf( true );
-					}
 
-					@Override
-					protected void done()
-					{
-						try
+						@Override
+						protected Boolean doInBackground() throws Exception
 						{
-							reenabler.reenable();
-							get();
-						}
-						catch ( final ExecutionException e )
-						{
-							e.getCause().printStackTrace();
-							final String msg = String.format( "Unexpected problem: %s",
-									e.getCause().toString() );
-							log.error( msg );
-						}
-						catch ( final InterruptedException e )
-						{
-							e.printStackTrace();
+							CircleSkinnerGUI.this.process();
+							final boolean canceled = circleSkinner.isCanceled();
+							circleSkinner = null;
+							return Boolean.valueOf( !canceled );
 						}
 
-					}
-				}.execute();
+						@Override
+						protected void done()
+						{
+							try
+							{
+								btnRun.setText( "Run" );
+								reenabler.reenable();
+								get();
+							}
+							catch ( final ExecutionException e )
+							{
+								e.getCause().printStackTrace();
+								final String msg = String.format( "Unexpected problem: %s",
+										e.getCause().toString() );
+								log.error( msg );
+							}
+							catch ( final InterruptedException e )
+							{
+								e.printStackTrace();
+							}
+
+						}
+					}.execute();
+				}
 			}
+
 		} );
 		panelButtons.add( btnRun );
 
@@ -843,6 +858,12 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		setVisible( true );
 	}
 
+	private void cancel()
+	{
+		if ( null != circleSkinner )
+			circleSkinner.cancel( "User canceled from the GUI." );
+	}
+
 	private void process()
 	{
 		// Determine if we need to create a new log window.
@@ -933,7 +954,15 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 
 		resultsTable.show( RESULTS_TABLE_TITLE );
 		messages.add( "" );
-		messages.add( String.format( "CircleSkinner completed in %.1f min.", ( end - start ) / 60000. ) );
+		if ( circleSkinner != null && circleSkinner.isCanceled() )
+		{
+			messages.add( String.format( "CircleSkinner was canceled after %.1f min.", ( end - start ) / 60000. ) );
+			messages.add( String.format( "Reason: %s", circleSkinner.getCancelReason() ) );
+		}
+		else
+		{
+			messages.add( String.format( "CircleSkinner completed in %.1f min.", ( end - start ) / 60000. ) );
+		}
 		messages.update();
 
 		/*
@@ -1155,12 +1184,12 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 	 * PRIVATE METHODS
 	 */
 
+	@SuppressWarnings( "unchecked" )
 	private Map< Integer, List< HoughCircle > > processImage( final Dataset dataset, final ResultsTable resultsTable )
 	{
 		final int maxND = limitDetectionNumber ? maxNDetections : Integer.MAX_VALUE;
 
-		@SuppressWarnings( "unchecked" )
-		final CircleSkinnerOp< T > circleSkinner = ( CircleSkinnerOp< T > ) Computers.unary( opService, CircleSkinnerOp.class, resultsTable,
+		this.circleSkinner = ( CircleSkinnerOp< T > ) Computers.unary( opService, CircleSkinnerOp.class, resultsTable,
 				dataset,
 				segmentationChannel - 1l,
 				circleThickness,
