@@ -1,5 +1,6 @@
 package net.imagej.circleskinner.hough;
 
+import org.scijava.Cancelable;
 import org.scijava.app.StatusService;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
@@ -21,6 +22,7 @@ import net.imglib2.view.Views;
 @Plugin( type = HoughTransformOp.class )
 public class HoughTransformOp< T extends BooleanType< T > >
 		extends AbstractUnaryHybridCF< IterableInterval< T >, Img< DoubleType > >
+		implements Cancelable
 {
 
 	@Parameter
@@ -93,6 +95,8 @@ public class HoughTransformOp< T extends BooleanType< T > >
 			}
 
 			statusService.showProgress( ++progress, ( int ) sum );
+			if ( isCanceled() )
+				return;
 		}
 	}
 
@@ -169,4 +173,29 @@ public class HoughTransformOp< T extends BooleanType< T > >
 		}
 
 	}
+
+	// -- Cancelable methods --
+
+	/** Reason for cancelation, or null if not canceled. */
+	private String cancelReason;
+
+	@Override
+	public boolean isCanceled()
+	{
+		return cancelReason != null;
+	}
+
+	/** Cancels the command execution, with the given reason for doing so. */
+	@Override
+	public void cancel( final String reason )
+	{
+		cancelReason = reason == null ? "" : reason;
+	}
+
+	@Override
+	public String getCancelReason()
+	{
+		return cancelReason;
+	}
+
 }
