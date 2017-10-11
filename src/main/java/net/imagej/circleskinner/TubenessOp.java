@@ -3,6 +3,7 @@ package net.imagej.circleskinner;
 import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
 
+import org.scijava.Cancelable;
 import org.scijava.app.StatusService;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
@@ -26,7 +27,7 @@ import net.imglib2.view.Views;
 @Plugin( type = TubenessOp.class )
 public class TubenessOp< T extends RealType< T > >
 		extends AbstractUnaryHybridCF< RandomAccessibleInterval< T >, Img< DoubleType > >
-// AbstractUnaryFunctionOp< RandomAccessibleInterval< T >, Img< DoubleType > >
+		implements Cancelable
 {
 
 	@Parameter
@@ -57,6 +58,7 @@ public class TubenessOp< T extends RealType< T > >
 	@Override
 	public void compute( final RandomAccessibleInterval< T > input, final Img< DoubleType > tubeness )
 	{
+		cancelReason = null;
 		
 		final int numDimensions = input.numDimensions();
 		// Sigmas in pixel units.
@@ -92,6 +94,8 @@ public class TubenessOp< T extends RealType< T > >
 					nThreads, es );
 
 			statusService.showProgress( 1, 3 );
+			if ( isCanceled() )
+				return;
 
 			// Hessian eigenvalues.
 			final Img< DoubleType > evs = TensorEigenValues.calculateEigenValuesSymmetric(
@@ -100,7 +104,8 @@ public class TubenessOp< T extends RealType< T > >
 					nThreads, es );
 
 			statusService.showProgress( 2, 3 );
-
+			if ( isCanceled() )
+				return;
 
 			final AbstractUnaryComputerOp< Iterable< DoubleType >, DoubleType > method;
 			switch ( numDimensions )
@@ -178,5 +183,28 @@ public class TubenessOp< T extends RealType< T > >
 		}
 	}
 
+	// -- Cancelable methods --
+
+	/** Reason for cancelation, or null if not canceled. */
+	private String cancelReason;
+
+	@Override
+	public boolean isCanceled()
+	{
+		return cancelReason != null;
+	}
+
+	/** Cancels the command execution, with the given reason for doing so. */
+	@Override
+	public void cancel( final String reason )
+	{
+		cancelReason = reason == null ? "" : reason;
+	}
+
+	@Override
+	public String getCancelReason()
+	{
+		return cancelReason;
+	}
 
 }
