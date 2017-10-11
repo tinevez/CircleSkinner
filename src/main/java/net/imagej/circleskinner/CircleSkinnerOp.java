@@ -2,10 +2,12 @@ package net.imagej.circleskinner;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.scijava.Cancelable;
 import org.scijava.ItemIO;
 import org.scijava.app.StatusService;
 import org.scijava.plugin.Parameter;
@@ -39,7 +41,7 @@ import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 
 @Plugin( type = CircleSkinnerOp.class )
-public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryComputerOp< Dataset, ResultsTable >
+public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryComputerOp< Dataset, ResultsTable > implements Cancelable
 {
 	private static final String SOURCE_NAME_COLUMN = "Image";
 	private static final String CHANEL_COLUMN = "Channel";
@@ -70,6 +72,13 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 
 	@Parameter
 	private StatusService statusService;
+
+	/**
+	 * This field will be set to be the op running the current (long)
+	 * calculation, so that it can be canceled when the user calls
+	 * {@link #cancel(String)}.
+	 */
+	private Cancelable cancelableOp;
 
 	/*
 	 * INPUT PARAMETERS.
@@ -146,6 +155,7 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 	@Override
 	public void compute( final Dataset source, ResultsTable table )
 	{
+		cancelReason = null;
 		voteImg = null;
 
 		if ( null == table )
@@ -272,7 +282,10 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 		final TubenessOp< T > tubenessOp =
 				( TubenessOp ) Functions.unary( ops, TubenessOp.class, RandomAccessibleInterval.class,
 						segmentationChannel, sigma, Util.getArrayFromValue( 1., segmentationChannel.numDimensions() ) );
+		this.cancelableOp = tubenessOp;
 		final Img< DoubleType > H = tubenessOp.calculate( segmentationChannel );
+		if ( isCanceled() )
+			return Collections.emptyList();
 
 		/*
 		 * Threshold with Otsu.
@@ -295,6 +308,7 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 		final HoughTransformOp< BitType > houghTransformOp =
 				( HoughTransformOp ) Functions.unary( ops, HoughTransformOp.class, RandomAccessibleInterval.class,
 						thresholded, minRadius, maxRadius, stepRadius );
+		this.cancelableOp = houghTransformOp;
 
 		if ( null == voteImg )
 			voteImg = houghTransformOp.createOutput( thresholded );
@@ -303,6 +317,8 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 				p.setZero();
 
 		houghTransformOp.compute( thresholded, voteImg );
+		if ( isCanceled() )
+			return Collections.emptyList();
 
 		/*
 		 * Detect maxima on vote image.
@@ -344,5 +360,31 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 		final CircleAnalyzerOp< T > circleAnalyzerOp =
 				( CircleAnalyzerOp ) Inplaces.binary1( ops, CircleAnalyzerOp.class, circles, analysisChannel );
 		circleAnalyzerOp.run();
+	}
+
+	// -- Cancelable methods --
+
+	/** Reason for cancelation, or null if not canceled. */
+	private String cancelReason;
+
+	@Override
+	public boolean isCanceled()
+	{
+		return cancelReason != null;
+	}
+
+	/** Cancels the command execution, with the given reason for doing so. */
+	@Override
+	public void cancel( final String reason )
+	{
+		cancelReason = reason == null ? "" : reason;
+		if ( reason != null && cancelableOp != null )
+			cancelableOp.cancel( reason );
+	}
+
+	@Override
+	public String getCancelReason()
+	{
+		return cancelReason;
 	}
 }
