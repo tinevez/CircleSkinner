@@ -20,9 +20,10 @@ import net.imglib2.type.numeric.RealType;
 import net.imglib2.util.Util;
 import net.imglib2.view.Views;
 
-@Plugin( type = HoughCircleDogDetectorOp.class )
+@Plugin( type = HoughCircleDetectorOp.class )
 public class HoughCircleDogDetectorOp< T extends RealType< T > & NativeType< T > >
 		extends AbstractUnaryFunctionOp< RandomAccessibleInterval< T >, List< HoughCircle > >
+		implements HoughCircleDetectorOp< T >
 {
 
 	private static final double K = 1.6;

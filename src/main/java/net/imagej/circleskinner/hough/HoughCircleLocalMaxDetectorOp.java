@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.scijava.Priority;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 import org.scijava.thread.ThreadService;
@@ -24,9 +25,10 @@ import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.util.Util;
 
-@Plugin( type = HoughCircleLocalMaxDetectorOp.class )
+@Plugin( type = HoughCircleDetectorOp.class, priority = Priority.HIGH )
 public class HoughCircleLocalMaxDetectorOp< T extends RealType< T > & NativeType< T > >
 		extends AbstractUnaryFunctionOp< RandomAccessibleInterval< T >, List< HoughCircle > >
+		implements HoughCircleDetectorOp< T >
 {
 
 	@Parameter

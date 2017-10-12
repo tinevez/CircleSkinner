@@ -23,7 +23,9 @@ import net.imagej.circleskinner.analyze.CircleAnalyzerOp;
 import net.imagej.circleskinner.gui.CircleSkinnerGUI;
 import net.imagej.circleskinner.hough.HoughCircle;
 import net.imagej.circleskinner.hough.HoughCircle.Stats;
+import net.imagej.circleskinner.hough.HoughCircleDetectorOp;
 import net.imagej.circleskinner.hough.HoughCircleDogDetectorOp;
+import net.imagej.circleskinner.hough.HoughCircleLocalMaxDetectorOp;
 import net.imagej.circleskinner.hough.HoughTransformOp;
 import net.imagej.ops.OpService;
 import net.imagej.ops.special.computer.AbstractUnaryComputerOp;
@@ -119,6 +121,9 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 
 	@Parameter( label = "Keep last vote image", required = false, type = ItemIO.INPUT )
 	private boolean doKeepVoteImg = false;
+
+	@Parameter( label = "Detection method", required = false, type = ItemIO.INPUT )
+	private DetectionMethod detectionMethod = DetectionMethod.FAST;
 
 	/*
 	 * OUTPUT PARAMETERS.
@@ -327,8 +332,8 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 		statusService.showStatus( "Detecting circles..." );
 
 		@SuppressWarnings( { "rawtypes", "unchecked" } )
-		final HoughCircleDogDetectorOp< DoubleType > houghDetectOp =
-				( HoughCircleDogDetectorOp ) Functions.unary( ops, HoughCircleDogDetectorOp.class, List.class,
+		final HoughCircleDetectorOp< DoubleType > houghDetectOp =
+				( HoughCircleDetectorOp ) Functions.unary( ops, detectionMethod.getOpClass(), List.class,
 						voteImg, circleThickness, minRadius, stepRadius, sensitivity );
 		List< HoughCircle > circles = houghDetectOp.calculate( voteImg );
 
@@ -386,5 +391,26 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 	public String getCancelReason()
 	{
 		return cancelReason;
+	}
+
+	public static enum DetectionMethod
+	{
+		FAST( HoughCircleLocalMaxDetectorOp.class ),
+		ACCURATE( HoughCircleDogDetectorOp.class );
+
+		@SuppressWarnings( "rawtypes" )
+		private final Class< ? extends HoughCircleDetectorOp > opClass;
+
+		@SuppressWarnings( "rawtypes" )
+		private DetectionMethod( final Class< ? extends HoughCircleDetectorOp > opClass )
+		{
+			this.opClass = opClass;
+		}
+
+		@SuppressWarnings( "rawtypes" )
+		public Class< ? extends HoughCircleDetectorOp > getOpClass()
+		{
+			return opClass;
+		}
 	}
 }
