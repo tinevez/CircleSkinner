@@ -2,15 +2,17 @@ package net.imagej.circleskinner.gui;
 
 import java.awt.BorderLayout;
 import java.awt.ComponentOrientation;
+import java.awt.Dimension;
 import java.awt.FileDialog;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
-import java.awt.Image;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -22,7 +24,10 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
+import javax.swing.AbstractAction;
+import javax.swing.Action;
 import javax.swing.ButtonGroup;
+import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -41,6 +46,8 @@ import javax.swing.UIManager;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
+import org.jdesktop.swingx.JXCollapsiblePane;
+import org.jdesktop.swingx.VerticalLayout;
 import org.scijava.command.Command;
 import org.scijava.display.Display;
 import org.scijava.display.DisplayService;
@@ -122,7 +129,6 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 	private static final int DEFAULT_MAX_N_DETECTIONS = 20;
 
 	private static final int MAX_MAX_N_DETECTIONS = 100;
-
 
 	/*
 	 * SERVICES.
@@ -304,49 +310,52 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		panelButtons.add( btnRun );
 
 		final JPanel parametersPanel = new JPanel();
-		panel.add( parametersPanel, BorderLayout.NORTH );
+		parametersPanel.setLayout( new VerticalLayout( 5 ) );
+		panel.add( parametersPanel, BorderLayout.CENTER );
+
+		final JLabel lblTitle = new JLabel( PLUGIN_NAME + " v" + PLUGIN_VERSION );
+		lblTitle.setFont( panel.getFont().deriveFont( Font.BOLD ).deriveFont( 15f ) );
+		lblTitle.setHorizontalAlignment( JLabel.CENTER );
+		lblTitle.setPreferredSize( new Dimension( 50, 50 ) );
+		panel.add( lblTitle, BorderLayout.NORTH );
+
+		/*
+		 * Parameters.
+		 */
+
+		final JXCollapsiblePane parametersCollapsible = new JXCollapsiblePane();
+		parametersCollapsible.addPropertyChangeListener( ( e ) -> pack() );
+		parametersCollapsible.setAnimated( false );
+
 		final GridBagLayout gbl_parametersPanel = new GridBagLayout();
 		gbl_parametersPanel.columnWidths = new int[] { 100, 70, 100, 70 };
 		gbl_parametersPanel.columnWeights = new double[] { 0.1, 0.15, 0.6, 0.15 };
-		gbl_parametersPanel.rowHeights = new int[] { 93, 0, 0, 0, 0, 0, 0, 0, 40, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-		gbl_parametersPanel.rowWeights = new double[] { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, };
-		parametersPanel.setLayout( gbl_parametersPanel );
+		parametersCollapsible.setLayout( gbl_parametersPanel );
 
-		final JLabel lblTitle = new JLabel( PLUGIN_NAME + " v" + PLUGIN_VERSION );
-		lblTitle.setIcon( new ImageIcon( LOGO.getImage().getScaledInstance( 32, 32, Image.SCALE_SMOOTH ) ) );
-		lblTitle.setFont( panel.getFont().deriveFont( Font.BOLD ).deriveFont( 15f ) );
-		final GridBagConstraints gbc_lblTitle = new GridBagConstraints();
-		gbc_lblTitle.gridwidth = 4;
-		gbc_lblTitle.insets = new Insets( 15, 5, 15, 0 );
-		gbc_lblTitle.gridx = 0;
-		gbc_lblTitle.gridy = 0;
-		parametersPanel.add( lblTitle, gbc_lblTitle );
+		final Action toggleParametersPanelAction = parametersCollapsible.getActionMap().get( JXCollapsiblePane.TOGGLE_ACTION );
+		toggleParametersPanelAction.putValue( JXCollapsiblePane.COLLAPSE_ICON, UIManager.getIcon( "Tree.expandedIcon" ) );
+		toggleParametersPanelAction.putValue( JXCollapsiblePane.EXPAND_ICON, UIManager.getIcon( "Tree.collapsedIcon" ) );
 
-		final JLabel lblparameters = new JLabel( "Parameters:" );
-		lblparameters.setFont( panel.getFont().deriveFont( Font.BOLD ).deriveFont( 13f ) );
-		final GridBagConstraints gbc_lblparameters = new GridBagConstraints();
-		gbc_lblparameters.insets = new Insets( 15, 5, 5, 0 );
-		gbc_lblparameters.anchor = GridBagConstraints.WEST;
-		gbc_lblparameters.gridwidth = 4;
-		gbc_lblparameters.gridx = 0;
-		gbc_lblparameters.gridy = 1;
-		parametersPanel.add( lblparameters, gbc_lblparameters );
+		final JButton toggleParameters = new JButton( toggleParametersPanelAction );
+		toggleParameters.setText( "Parameters:" );
+		toggleParameters.setFont( panel.getFont().deriveFont( Font.BOLD ).deriveFont( 13f ) );
+		parametersPanel.add( toggleParameters );
 
 		final JLabel lblSegmentationChannel = new JLabel( "Segmentation channel" );
 		final GridBagConstraints gbc_lblSegmentationChannel = new GridBagConstraints();
 		gbc_lblSegmentationChannel.anchor = GridBagConstraints.EAST;
 		gbc_lblSegmentationChannel.insets = new Insets( 5, 5, 5, 5 );
 		gbc_lblSegmentationChannel.gridx = 0;
-		gbc_lblSegmentationChannel.gridy = 2;
-		parametersPanel.add( lblSegmentationChannel, gbc_lblSegmentationChannel );
+		gbc_lblSegmentationChannel.gridy = 0;
+		parametersCollapsible.add( lblSegmentationChannel, gbc_lblSegmentationChannel );
 
 		final JSpinner spinnerSegmentationChannel = new JSpinner( new SpinnerNumberModel( segmentationChannel, 1l, 99l, 1 ) );
 		final GridBagConstraints gbc_spinnerSegmentationChannel = new GridBagConstraints();
 		gbc_spinnerSegmentationChannel.fill = GridBagConstraints.HORIZONTAL;
 		gbc_spinnerSegmentationChannel.insets = new Insets( 5, 5, 5, 5 );
 		gbc_spinnerSegmentationChannel.gridx = 1;
-		gbc_spinnerSegmentationChannel.gridy = 2;
-		parametersPanel.add( spinnerSegmentationChannel, gbc_spinnerSegmentationChannel );
+		gbc_spinnerSegmentationChannel.gridy = 0;
+		parametersCollapsible.add( spinnerSegmentationChannel, gbc_spinnerSegmentationChannel );
 
 		spinnerSegmentationChannel.addChangeListener( new ChangeListener()
 		{
@@ -372,8 +381,8 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		gbc_lblCircleThicknesspixels.anchor = GridBagConstraints.EAST;
 		gbc_lblCircleThicknesspixels.insets = new Insets( 5, 5, 5, 5 );
 		gbc_lblCircleThicknesspixels.gridx = 0;
-		gbc_lblCircleThicknesspixels.gridy = 3;
-		parametersPanel.add( lblCircleThicknesspixels, gbc_lblCircleThicknesspixels );
+		gbc_lblCircleThicknesspixels.gridy = 1;
+		parametersCollapsible.add( lblCircleThicknesspixels, gbc_lblCircleThicknesspixels );
 
 		final JSlider sliderThickness = new JSlider();
 		sliderThickness.setPaintLabels( true );
@@ -388,16 +397,16 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		gbc_sliderThifckness.fill = GridBagConstraints.HORIZONTAL;
 		gbc_sliderThifckness.insets = new Insets( 5, 5, 5, 5 );
 		gbc_sliderThifckness.gridx = 1;
-		gbc_sliderThifckness.gridy = 3;
-		parametersPanel.add( sliderThickness, gbc_sliderThifckness );
+		gbc_sliderThifckness.gridy = 1;
+		parametersCollapsible.add( sliderThickness, gbc_sliderThifckness );
 
 		final JSpinner spinnerThickness = new JSpinner( new SpinnerNumberModel( circleThickness, MIN_THICKNESS, MAX_THICKNESS, 1 ) );
 		final GridBagConstraints gbc_spinnerThickness = new GridBagConstraints();
 		gbc_spinnerThickness.fill = GridBagConstraints.HORIZONTAL;
 		gbc_spinnerThickness.insets = new Insets( 5, 5, 5, 5 );
 		gbc_spinnerThickness.gridx = 3;
-		gbc_spinnerThickness.gridy = 3;
-		parametersPanel.add( spinnerThickness, gbc_spinnerThickness );
+		gbc_spinnerThickness.gridy = 1;
+		parametersCollapsible.add( spinnerThickness, gbc_spinnerThickness );
 
 		spinnerThickness.addChangeListener( ( e ) -> sliderThickness.setValue( ( int ) spinnerThickness.getValue() ) );
 		sliderThickness.addChangeListener( new ChangeListener()
@@ -417,8 +426,8 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		gbc_lblThresholdAdjustment.anchor = GridBagConstraints.EAST;
 		gbc_lblThresholdAdjustment.insets = new Insets( 5, 5, 5, 5 );
 		gbc_lblThresholdAdjustment.gridx = 0;
-		gbc_lblThresholdAdjustment.gridy = 4;
-		parametersPanel.add( lblThresholdAdjustment, gbc_lblThresholdAdjustment );
+		gbc_lblThresholdAdjustment.gridy = 2;
+		parametersCollapsible.add( lblThresholdAdjustment, gbc_lblThresholdAdjustment );
 
 		final JSlider sliderThreshold = new JSlider();
 		sliderThreshold.setPaintLabels( true );
@@ -433,16 +442,16 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		gbc_sliderThreshold.fill = GridBagConstraints.HORIZONTAL;
 		gbc_sliderThreshold.insets = new Insets( 5, 5, 5, 5 );
 		gbc_sliderThreshold.gridx = 1;
-		gbc_sliderThreshold.gridy = 4;
-		parametersPanel.add( sliderThreshold, gbc_sliderThreshold );
+		gbc_sliderThreshold.gridy = 2;
+		parametersCollapsible.add( sliderThreshold, gbc_sliderThreshold );
 
 		final JSpinner spinnerThreshold = new JSpinner( new SpinnerNumberModel( ( int ) thresholdFactor, MIN_THRESHOLD, MAX_THRESHOLD, 10 ) );
 		final GridBagConstraints gbc_spinnerThreshold = new GridBagConstraints();
 		gbc_spinnerThreshold.fill = GridBagConstraints.HORIZONTAL;
 		gbc_spinnerThreshold.insets = new Insets( 5, 5, 5, 5 );
 		gbc_spinnerThreshold.gridx = 3;
-		gbc_spinnerThreshold.gridy = 4;
-		parametersPanel.add( spinnerThreshold, gbc_spinnerThreshold );
+		gbc_spinnerThreshold.gridy = 2;
+		parametersCollapsible.add( spinnerThreshold, gbc_spinnerThreshold );
 
 		spinnerThreshold.addChangeListener( ( e ) -> sliderThreshold.setValue( ( int ) spinnerThreshold.getValue() ) );
 		sliderThreshold.addChangeListener( new ChangeListener()
@@ -462,8 +471,8 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		gbc_lblCircleDetectionSensitivity.anchor = GridBagConstraints.EAST;
 		gbc_lblCircleDetectionSensitivity.insets = new Insets( 5, 5, 5, 5 );
 		gbc_lblCircleDetectionSensitivity.gridx = 0;
-		gbc_lblCircleDetectionSensitivity.gridy = 5;
-		parametersPanel.add( lblCircleDetectionSensitivity, gbc_lblCircleDetectionSensitivity );
+		gbc_lblCircleDetectionSensitivity.gridy = 3;
+		parametersCollapsible.add( lblCircleDetectionSensitivity, gbc_lblCircleDetectionSensitivity );
 
 		final JSlider sliderSensitivity = new JSlider();
 		sliderSensitivity.setMinorTickSpacing( 25 );
@@ -478,16 +487,16 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		gbc_sliderSensitivity.fill = GridBagConstraints.HORIZONTAL;
 		gbc_sliderSensitivity.insets = new Insets( 5, 5, 5, 5 );
 		gbc_sliderSensitivity.gridx = 1;
-		gbc_sliderSensitivity.gridy = 5;
-		parametersPanel.add( sliderSensitivity, gbc_sliderSensitivity );
+		gbc_sliderSensitivity.gridy = 3;
+		parametersCollapsible.add( sliderSensitivity, gbc_sliderSensitivity );
 
 		final JSpinner spinnerSentivity = new JSpinner( new SpinnerNumberModel( ( int ) sensitivity, MIN_SENSITIVITY, MAX_SENSITIVITY, 10 ) );
 		final GridBagConstraints gbc_spinnerSentivity = new GridBagConstraints();
 		gbc_spinnerSentivity.insets = new Insets( 5, 5, 5, 5 );
 		gbc_spinnerSentivity.fill = GridBagConstraints.HORIZONTAL;
 		gbc_spinnerSentivity.gridx = 3;
-		gbc_spinnerSentivity.gridy = 5;
-		parametersPanel.add( spinnerSentivity, gbc_spinnerSentivity );
+		gbc_spinnerSentivity.gridy = 3;
+		parametersCollapsible.add( spinnerSentivity, gbc_spinnerSentivity );
 
 		spinnerSentivity.addChangeListener( ( e ) -> sliderSensitivity.setValue( ( int ) spinnerSentivity.getValue() ) );
 		sliderSensitivity.addChangeListener( new ChangeListener()
@@ -501,41 +510,53 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 				spinnerSentivity.setValue( sliderSensitivity.getValue() );
 			}
 		} );
+		parametersPanel.add( parametersCollapsible );
 
-		final JLabel chckbxAdvancedParameters = new JLabel( "Advanced parameters:" );
-		chckbxAdvancedParameters.setFont( panel.getFont().deriveFont( Font.BOLD ).deriveFont( 13f ) );
-		chckbxAdvancedParameters.setHorizontalTextPosition( SwingConstants.LEFT );
-		final GridBagConstraints gbc_chckbxAdvancedParameters = new GridBagConstraints();
-		gbc_chckbxAdvancedParameters.insets = new Insets( 15, 5, 5, 0 );
-		gbc_chckbxAdvancedParameters.anchor = GridBagConstraints.WEST;
-		gbc_chckbxAdvancedParameters.gridwidth = 4;
-		gbc_chckbxAdvancedParameters.gridx = 0;
-		gbc_chckbxAdvancedParameters.gridy = 6;
-		parametersPanel.add( chckbxAdvancedParameters, gbc_chckbxAdvancedParameters );
+		/*
+		 * Advanced parameters.
+		 */
+
+		final JXCollapsiblePane advancedParametersCollapsible = new JXCollapsiblePane();
+		advancedParametersCollapsible.setCollapsed( true );
+		advancedParametersCollapsible.addPropertyChangeListener( ( e ) -> pack() );
+		advancedParametersCollapsible.setAnimated( false );
+		final Action toggleAdvancedParametersPanelAction = advancedParametersCollapsible.getActionMap().get( JXCollapsiblePane.TOGGLE_ACTION );
+		toggleAdvancedParametersPanelAction.putValue( JXCollapsiblePane.COLLAPSE_ICON, UIManager.getIcon( "Tree.expandedIcon" ) );
+		toggleAdvancedParametersPanelAction.putValue( JXCollapsiblePane.EXPAND_ICON, UIManager.getIcon( "Tree.collapsedIcon" ) );
+
+		final GridBagLayout gbl_advancedParametersPanel = new GridBagLayout();
+		gbl_advancedParametersPanel.columnWidths = new int[] { 100, 70, 100, 70 };
+		gbl_advancedParametersPanel.columnWeights = new double[] { 0.1, 0.15, 0.6, 0.15 };
+		advancedParametersCollapsible.setLayout( gbl_advancedParametersPanel );
+
+		final JButton toggleAdvancedParameters = new JButton( toggleAdvancedParametersPanelAction );
+		toggleAdvancedParameters.setText( "Advanced parameters:" );
+		toggleAdvancedParameters.setFont( panel.getFont().deriveFont( Font.BOLD ).deriveFont( 13f ) );
+		parametersPanel.add( toggleAdvancedParameters );
 
 		final JLabel lblMinMax = new JLabel( "Min & Max radius (pixels)" );
 		final GridBagConstraints gbc_lblMinMax = new GridBagConstraints();
 		gbc_lblMinMax.anchor = GridBagConstraints.EAST;
 		gbc_lblMinMax.insets = new Insets( 5, 5, 5, 5 );
 		gbc_lblMinMax.gridx = 0;
-		gbc_lblMinMax.gridy = 7;
-		parametersPanel.add( lblMinMax, gbc_lblMinMax );
+		gbc_lblMinMax.gridy = 0;
+		advancedParametersCollapsible.add( lblMinMax, gbc_lblMinMax );
 
 		final JSpinner spinnerMinRadius = new JSpinner( new SpinnerNumberModel( minRadius, 5, 300, 2 ) );
 		final GridBagConstraints gbc_spinnerMinRadius = new GridBagConstraints();
 		gbc_spinnerMinRadius.fill = GridBagConstraints.HORIZONTAL;
 		gbc_spinnerMinRadius.insets = new Insets( 5, 5, 5, 5 );
 		gbc_spinnerMinRadius.gridx = 1;
-		gbc_spinnerMinRadius.gridy = 7;
-		parametersPanel.add( spinnerMinRadius, gbc_spinnerMinRadius );
+		gbc_spinnerMinRadius.gridy = 0;
+		advancedParametersCollapsible.add( spinnerMinRadius, gbc_spinnerMinRadius );
 
 		final JSpinner spinnerMaxRadius = new JSpinner( new SpinnerNumberModel( maxRadius, 5, 300, 2 ) );
 		final GridBagConstraints gbc_spinnerMaxRadius = new GridBagConstraints();
 		gbc_spinnerMaxRadius.fill = GridBagConstraints.HORIZONTAL;
 		gbc_spinnerMaxRadius.insets = new Insets( 5, 5, 5, 5 );
 		gbc_spinnerMaxRadius.gridx = 3;
-		gbc_spinnerMaxRadius.gridy = 7;
-		parametersPanel.add( spinnerMaxRadius, gbc_spinnerMaxRadius );
+		gbc_spinnerMaxRadius.gridy = 0;
+		advancedParametersCollapsible.add( spinnerMaxRadius, gbc_spinnerMaxRadius );
 
 		final RangeSlider rangeSlider = new RangeSlider( 5, 300, minRadius, maxRadius );
 		rangeSlider.setMinorTickSpacing( 25 );
@@ -572,24 +593,24 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		gbc_rangeSlider.fill = GridBagConstraints.HORIZONTAL;
 		gbc_rangeSlider.insets = new Insets( 5, 5, 5, 5 );
 		gbc_rangeSlider.gridx = 2;
-		gbc_rangeSlider.gridy = 7;
-		parametersPanel.add( rangeSlider, gbc_rangeSlider );
+		gbc_rangeSlider.gridy = 0;
+		advancedParametersCollapsible.add( rangeSlider, gbc_rangeSlider );
 
 		final JLabel lblStepRadiuspixels = new JLabel( "Step radius (pixels)" );
 		final GridBagConstraints gbc_lblStepRadiuspixels = new GridBagConstraints();
 		gbc_lblStepRadiuspixels.anchor = GridBagConstraints.EAST;
 		gbc_lblStepRadiuspixels.insets = new Insets( 5, 5, 5, 5 );
 		gbc_lblStepRadiuspixels.gridx = 0;
-		gbc_lblStepRadiuspixels.gridy = 8;
-		parametersPanel.add( lblStepRadiuspixels, gbc_lblStepRadiuspixels );
+		gbc_lblStepRadiuspixels.gridy = 1;
+		advancedParametersCollapsible.add( lblStepRadiuspixels, gbc_lblStepRadiuspixels );
 
 		final JSpinner spinnerStepRadius = new JSpinner( new SpinnerNumberModel( stepRadius, 1, 100, 1 ) );
 		final GridBagConstraints gbc_spinnerStepRadius = new GridBagConstraints();
 		gbc_spinnerStepRadius.fill = GridBagConstraints.HORIZONTAL;
 		gbc_spinnerStepRadius.insets = new Insets( 5, 5, 5, 5 );
 		gbc_spinnerStepRadius.gridx = 1;
-		gbc_spinnerStepRadius.gridy = 8;
-		parametersPanel.add( spinnerStepRadius, gbc_spinnerStepRadius );
+		gbc_spinnerStepRadius.gridy = 1;
+		advancedParametersCollapsible.add( spinnerStepRadius, gbc_spinnerStepRadius );
 
 		spinnerStepRadius.addChangeListener( new ChangeListener()
 		{
@@ -609,8 +630,8 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		gbc_chckbxLimitNumberOf.gridwidth = 2;
 		gbc_chckbxLimitNumberOf.insets = new Insets( 5, 5, 5, 5 );
 		gbc_chckbxLimitNumberOf.gridx = 0;
-		gbc_chckbxLimitNumberOf.gridy = 9;
-		parametersPanel.add( chckbxLimitNumberOf, gbc_chckbxLimitNumberOf );
+		gbc_chckbxLimitNumberOf.gridy = 2;
+		advancedParametersCollapsible.add( chckbxLimitNumberOf, gbc_chckbxLimitNumberOf );
 
 		final JSlider sliderMaxNDetections = new JSlider();
 		sliderMaxNDetections.setMinorTickSpacing( 5 );
@@ -624,16 +645,16 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		gbc_sliderMaxNDetections.fill = GridBagConstraints.HORIZONTAL;
 		gbc_sliderMaxNDetections.insets = new Insets( 0, 0, 5, 5 );
 		gbc_sliderMaxNDetections.gridx = 2;
-		gbc_sliderMaxNDetections.gridy = 9;
-		parametersPanel.add( sliderMaxNDetections, gbc_sliderMaxNDetections );
+		gbc_sliderMaxNDetections.gridy = 2;
+		advancedParametersCollapsible.add( sliderMaxNDetections, gbc_sliderMaxNDetections );
 
 		final JSpinner spinnerMaxNDetections = new JSpinner( new SpinnerNumberModel( maxNDetections, 0, 100, 1 ) );
 		final GridBagConstraints gbc_spinnerMaxNDetections = new GridBagConstraints();
 		gbc_spinnerMaxNDetections.fill = GridBagConstraints.HORIZONTAL;
 		gbc_spinnerMaxNDetections.insets = new Insets( 5, 5, 5, 5 );
 		gbc_spinnerMaxNDetections.gridx = 3;
-		gbc_spinnerMaxNDetections.gridy = 9;
-		parametersPanel.add( spinnerMaxNDetections, gbc_spinnerMaxNDetections );
+		gbc_spinnerMaxNDetections.gridy = 2;
+		advancedParametersCollapsible.add( spinnerMaxNDetections, gbc_spinnerMaxNDetections );
 
 		spinnerMaxNDetections.addChangeListener( ( e ) -> sliderMaxNDetections.setValue( ( int ) spinnerMaxNDetections.getValue() ) );
 		sliderMaxNDetections.addChangeListener( new ChangeListener()
@@ -659,16 +680,29 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 				spinnerMaxNDetections.setEnabled( chckbxLimitNumberOf.isSelected() );
 			}
 		} );
+		parametersPanel.add( advancedParametersCollapsible );
 
-		final JLabel lblManualParameterAdjutments = new JLabel( "Manual parameter adjustments:" );
-		lblManualParameterAdjutments.setFont( panel.getFont().deriveFont( Font.BOLD ).deriveFont( 13f ) );
-		final GridBagConstraints gbc_lblManualParameterAdjutments = new GridBagConstraints();
-		gbc_lblManualParameterAdjutments.anchor = GridBagConstraints.WEST;
-		gbc_lblManualParameterAdjutments.gridwidth = 4;
-		gbc_lblManualParameterAdjutments.insets = new Insets( 15, 5, 5, 0 );
-		gbc_lblManualParameterAdjutments.gridx = 0;
-		gbc_lblManualParameterAdjutments.gridy = 10;
-		parametersPanel.add( lblManualParameterAdjutments, gbc_lblManualParameterAdjutments );
+		/*
+		 * Manual adjusters.
+		 */
+
+		final JXCollapsiblePane manualAdjustmentCollapsible = new JXCollapsiblePane();
+		manualAdjustmentCollapsible.setCollapsed( true );
+		manualAdjustmentCollapsible.addPropertyChangeListener( ( e ) -> pack() );
+		manualAdjustmentCollapsible.setAnimated( false );
+		final Action toggleManualAdjustmentPanelAction = manualAdjustmentCollapsible.getActionMap().get( JXCollapsiblePane.TOGGLE_ACTION );
+		toggleManualAdjustmentPanelAction.putValue( JXCollapsiblePane.COLLAPSE_ICON, UIManager.getIcon( "Tree.expandedIcon" ) );
+		toggleManualAdjustmentPanelAction.putValue( JXCollapsiblePane.EXPAND_ICON, UIManager.getIcon( "Tree.collapsedIcon" ) );
+
+		final GridBagLayout gbl_manualAdjustmentsPanel = new GridBagLayout();
+		gbl_manualAdjustmentsPanel.columnWidths = new int[] { 100, 70, 100, 70 };
+		gbl_manualAdjustmentsPanel.columnWeights = new double[] { 0.1, 0.15, 0.6, 0.15 };
+		manualAdjustmentCollapsible.setLayout( gbl_manualAdjustmentsPanel );
+
+		final JButton toggleManualParameterAdjutments = new JButton( toggleManualAdjustmentPanelAction );
+		toggleManualParameterAdjutments.setText( "Manual parameter adjustments:" );
+		toggleManualParameterAdjutments.setFont( panel.getFont().deriveFont( Font.BOLD ).deriveFont( 13f ) );
+		parametersPanel.add( toggleManualParameterAdjutments );
 
 		final JButton btnAdjustThreshold = new JButton( "Launch" );
 		btnAdjustThreshold.setToolTipText( TOOLTIP_ADJUST_THRESHOLD );
@@ -677,8 +711,8 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		gbc_btnAdjustThreshold.anchor = GridBagConstraints.EAST;
 		gbc_btnAdjustThreshold.insets = new Insets( 5, 5, 5, 5 );
 		gbc_btnAdjustThreshold.gridx = 0;
-		gbc_btnAdjustThreshold.gridy = 11;
-		parametersPanel.add( btnAdjustThreshold, gbc_btnAdjustThreshold );
+		gbc_btnAdjustThreshold.gridy = 0;
+		manualAdjustmentCollapsible.add( btnAdjustThreshold, gbc_btnAdjustThreshold );
 
 		final JLabel lblAdjustThreshold = new JLabel( "Adjust thickness and threshold." );
 		lblAdjustThreshold.setToolTipText( TOOLTIP_ADJUST_THRESHOLD );
@@ -687,8 +721,8 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		gbc_lblAdjustThreshold.anchor = GridBagConstraints.WEST;
 		gbc_lblAdjustThreshold.gridwidth = 3;
 		gbc_lblAdjustThreshold.gridx = 1;
-		gbc_lblAdjustThreshold.gridy = 11;
-		parametersPanel.add( lblAdjustThreshold, gbc_lblAdjustThreshold );
+		gbc_lblAdjustThreshold.gridy = 0;
+		manualAdjustmentCollapsible.add( lblAdjustThreshold, gbc_lblAdjustThreshold );
 
 		final JButton btnAdjustSensitivity = new JButton( "Launch" );
 		btnAdjustSensitivity.addActionListener( ( e ) -> adjustSensitivity( sliderSensitivity ) );
@@ -696,8 +730,8 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		gbc_btnAdjustSensitivity.anchor = GridBagConstraints.EAST;
 		gbc_btnAdjustSensitivity.insets = new Insets( 5, 5, 5, 5 );
 		gbc_btnAdjustSensitivity.gridx = 0;
-		gbc_btnAdjustSensitivity.gridy = 12;
-		parametersPanel.add( btnAdjustSensitivity, gbc_btnAdjustSensitivity );
+		gbc_btnAdjustSensitivity.gridy = 1;
+		manualAdjustmentCollapsible.add( btnAdjustSensitivity, gbc_btnAdjustSensitivity );
 
 		final JLabel lblAdjustDetectionSensitivity = new JLabel( "Adjust detection sensitivity." );
 		final GridBagConstraints gbc_lblAdjustDetectionSensitivity = new GridBagConstraints();
@@ -705,26 +739,38 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		gbc_lblAdjustDetectionSensitivity.gridwidth = 3;
 		gbc_lblAdjustDetectionSensitivity.anchor = GridBagConstraints.WEST;
 		gbc_lblAdjustDetectionSensitivity.gridx = 1;
-		gbc_lblAdjustDetectionSensitivity.gridy = 12;
-		parametersPanel.add( lblAdjustDetectionSensitivity, gbc_lblAdjustDetectionSensitivity );
+		gbc_lblAdjustDetectionSensitivity.gridy = 1;
+		manualAdjustmentCollapsible.add( lblAdjustDetectionSensitivity, gbc_lblAdjustDetectionSensitivity );
+		parametersPanel.add( manualAdjustmentCollapsible );
 
-		final JLabel lblAnalysisTarget = new JLabel( "Analysis target:" );
-		lblAnalysisTarget.setFont( panel.getFont().deriveFont( Font.BOLD ).deriveFont( 13f ) );
-		final GridBagConstraints gbc_lblAnalysisTarget = new GridBagConstraints();
-		gbc_lblAnalysisTarget.insets = new Insets( 15, 5, 5, 0 );
-		gbc_lblAnalysisTarget.anchor = GridBagConstraints.WEST;
-		gbc_lblAnalysisTarget.gridwidth = 4;
-		gbc_lblAnalysisTarget.gridx = 0;
-		gbc_lblAnalysisTarget.gridy = 13;
-		parametersPanel.add( lblAnalysisTarget, gbc_lblAnalysisTarget );
+		/*
+		 * Analysis target.
+		 */
+
+		final JXCollapsiblePane analysisTargetCollapsible = new JXCollapsiblePane();
+		analysisTargetCollapsible.addPropertyChangeListener( ( e ) -> pack() );
+		analysisTargetCollapsible.setAnimated( false );
+		final Action toggleAnalysisTargetPanelAction = analysisTargetCollapsible.getActionMap().get( JXCollapsiblePane.TOGGLE_ACTION );
+		toggleAnalysisTargetPanelAction.putValue( JXCollapsiblePane.COLLAPSE_ICON, UIManager.getIcon( "Tree.expandedIcon" ) );
+		toggleAnalysisTargetPanelAction.putValue( JXCollapsiblePane.EXPAND_ICON, UIManager.getIcon( "Tree.collapsedIcon" ) );
+
+		final GridBagLayout gbl_analysisTargetPanel = new GridBagLayout();
+		gbl_analysisTargetPanel.columnWidths = new int[] { 100, 70, 100, 70 };
+		gbl_analysisTargetPanel.columnWeights = new double[] { 0.1, 0.15, 0.6, 0.15 };
+		analysisTargetCollapsible.setLayout( gbl_analysisTargetPanel );
+
+		final JButton toggleAnalysisTarget = new JButton( toggleAnalysisTargetPanelAction );
+		toggleAnalysisTarget.setText( "Analysis target:" );
+		toggleAnalysisTarget.setFont( panel.getFont().deriveFont( Font.BOLD ).deriveFont( 13f ) );
+		parametersPanel.add( toggleAnalysisTarget );
 
 		final JLabel lblAnalyze = new JLabel( "Analyze" );
 		final GridBagConstraints gbc_lblAnalyze = new GridBagConstraints();
 		gbc_lblAnalyze.anchor = GridBagConstraints.EAST;
 		gbc_lblAnalyze.insets = new Insets( 5, 5, 5, 5 );
 		gbc_lblAnalyze.gridx = 0;
-		gbc_lblAnalyze.gridy = 14;
-		parametersPanel.add( lblAnalyze, gbc_lblAnalyze );
+		gbc_lblAnalyze.gridy = 0;
+		analysisTargetCollapsible.add( lblAnalyze, gbc_lblAnalyze );
 
 		final JRadioButton rdbtnCurrentImage = new JRadioButton( "Current image." );
 		final GridBagConstraints gbc_rdbtnCurrentImage = new GridBagConstraints();
@@ -732,8 +778,8 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		gbc_rdbtnCurrentImage.gridwidth = 2;
 		gbc_rdbtnCurrentImage.insets = new Insets( 5, 5, 5, 5 );
 		gbc_rdbtnCurrentImage.gridx = 1;
-		gbc_rdbtnCurrentImage.gridy = 14;
-		parametersPanel.add( rdbtnCurrentImage, gbc_rdbtnCurrentImage );
+		gbc_rdbtnCurrentImage.gridy = 0;
+		analysisTargetCollapsible.add( rdbtnCurrentImage, gbc_rdbtnCurrentImage );
 
 		final JRadioButton rdbtnFolder = new JRadioButton( "Folder:" );
 		final GridBagConstraints gbc_rdbtnFolder = new GridBagConstraints();
@@ -741,8 +787,8 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		gbc_rdbtnFolder.gridwidth = 2;
 		gbc_rdbtnFolder.insets = new Insets( 5, 5, 5, 5 );
 		gbc_rdbtnFolder.gridx = 1;
-		gbc_rdbtnFolder.gridy = 15;
-		parametersPanel.add( rdbtnFolder, gbc_rdbtnFolder );
+		gbc_rdbtnFolder.gridy = 1;
+		analysisTargetCollapsible.add( rdbtnFolder, gbc_rdbtnFolder );
 
 		final ButtonGroup buttonGroup = new ButtonGroup();
 		buttonGroup.add( rdbtnCurrentImage );
@@ -757,8 +803,8 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		gbc_btnBrowse.anchor = GridBagConstraints.EAST;
 		gbc_btnBrowse.insets = new Insets( 5, 5, 5, 5 );
 		gbc_btnBrowse.gridx = 0;
-		gbc_btnBrowse.gridy = 16;
-		parametersPanel.add( btnBrowse, gbc_btnBrowse );
+		gbc_btnBrowse.gridy = 2;
+		analysisTargetCollapsible.add( btnBrowse, gbc_btnBrowse );
 
 		final JTextField textFieldFolder = new JTextField( folder.getAbsolutePath() );
 		textFieldFolder.setFont( panel.getFont().deriveFont( 10f ) );
@@ -767,8 +813,8 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		gbc_textFieldFolder.gridwidth = 3;
 		gbc_textFieldFolder.fill = GridBagConstraints.HORIZONTAL;
 		gbc_textFieldFolder.gridx = 1;
-		gbc_textFieldFolder.gridy = 16;
-		parametersPanel.add( textFieldFolder, gbc_textFieldFolder );
+		gbc_textFieldFolder.gridy = 2;
+		analysisTargetCollapsible.add( textFieldFolder, gbc_textFieldFolder );
 		textFieldFolder.setColumns( 10 );
 
 		final JCheckBox chckbxSavePngs = new JCheckBox( "Export PNGs?", saveSnapshot );
@@ -788,16 +834,16 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		gbc_chckbxSavePngs.anchor = GridBagConstraints.WEST;
 		gbc_chckbxSavePngs.gridwidth = 3;
 		gbc_chckbxSavePngs.gridx = 1;
-		gbc_chckbxSavePngs.gridy = 17;
-		parametersPanel.add( chckbxSavePngs, gbc_chckbxSavePngs );
+		gbc_chckbxSavePngs.gridy = 3;
+		analysisTargetCollapsible.add( chckbxSavePngs, gbc_chckbxSavePngs );
 
 		final JLabel lblInfoFiles = new JLabel( " " );
 		final GridBagConstraints gbc_lblInfoFiles = new GridBagConstraints();
 		gbc_lblInfoFiles.anchor = GridBagConstraints.EAST;
 		gbc_lblInfoFiles.gridwidth = 4;
 		gbc_lblInfoFiles.gridx = 0;
-		gbc_lblInfoFiles.gridy = 18;
-		parametersPanel.add( lblInfoFiles, gbc_lblInfoFiles );
+		gbc_lblInfoFiles.gridy = 4;
+		analysisTargetCollapsible.add( lblInfoFiles, gbc_lblInfoFiles );
 
 		final JComponent[] targetComponents = new JComponent[] { textFieldFolder, btnBrowse, chckbxSavePngs };
 		final ActionListener rdnBtnListener = new ActionListener()
@@ -853,6 +899,7 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 				prefs.put( CircleSkinnerGUI.class, "folder", folder.getAbsolutePath() );
 			}
 		} );
+		parametersPanel.add( analysisTargetCollapsible );
 
 		pack();
 		setVisible( true );
@@ -1249,6 +1296,61 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		public String toString()
 		{
 			return str;
+		}
+	}
+
+	private static final Icon EXPAND_ICON = UIManager.getIcon( "Tree.expandedIcon" );
+
+	private static final Icon COLLAPSE_ICON = UIManager.getIcon( "Tree.collapsedIcon" );
+
+	/**
+	 * Toggles the JXCollapsiblePane state and updates its icon based on the
+	 * JXCollapsiblePane "collapsed" status.
+	 */
+	private class ToggleAction extends AbstractAction implements PropertyChangeListener
+	{
+
+		private final JXCollapsiblePane target;
+
+		public ToggleAction( final JXCollapsiblePane target )
+		{
+			super( JXCollapsiblePane.TOGGLE_ACTION );
+			this.target = target;
+			target.addPropertyChangeListener( "collapsed", this );
+		}
+
+		@Override
+		public void putValue( final String key, final Object newValue )
+		{
+			super.putValue( key, newValue );
+			if ( EXPAND_ICON.equals( key ) || COLLAPSE_ICON.equals( key ) )
+			{
+				updateIcon();
+			}
+		}
+
+		@Override
+		public void actionPerformed( final ActionEvent e )
+		{
+			target.setCollapsed( !target.isCollapsed() );
+		}
+
+		@Override
+		public void propertyChange( final PropertyChangeEvent evt )
+		{
+			updateIcon();
+		}
+
+		void updateIcon()
+		{
+			if ( target.isCollapsed() )
+			{
+				putValue( SMALL_ICON, EXPAND_ICON );
+			}
+			else
+			{
+				putValue( SMALL_ICON, COLLAPSE_ICON );
+			}
 		}
 	}
 
