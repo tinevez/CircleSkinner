@@ -335,7 +335,10 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 		final HoughCircleDetectorOp< DoubleType > houghDetectOp =
 				( HoughCircleDetectorOp ) Functions.unary( ops, detectionMethod.getOpClass(), List.class,
 						voteImg, circleThickness, minRadius, stepRadius, sensitivity );
+		this.cancelableOp = houghDetectOp;
 		List< HoughCircle > circles = houghDetectOp.calculate( voteImg );
+		if ( isCanceled() )
+			return Collections.emptyList();
 
 		/*
 		 * Limit number of detections.

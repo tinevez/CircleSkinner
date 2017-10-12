@@ -66,6 +66,9 @@ public class HoughCircleDogDetectorOp< T extends RealType< T > & NativeType< T >
 		dog.setExecutorService( es );
 		final ArrayList< RefinedPeak< Point > > refined = dog.getSubpixelPeaks();
 
+		if ( isCanceled() )
+			return Collections.emptyList();
+
 		/*
 		 * Create circles.
 		 */
@@ -89,4 +92,29 @@ public class HoughCircleDogDetectorOp< T extends RealType< T > & NativeType< T >
 		Collections.sort( circles );
 		return circles;
 	}
+
+	// -- Cancelable methods --
+
+	/** Reason for cancelation, or null if not canceled. */
+	private String cancelReason;
+
+	@Override
+	public boolean isCanceled()
+	{
+		return cancelReason != null;
+	}
+
+	/** Cancels the command execution, with the given reason for doing so. */
+	@Override
+	public void cancel( final String reason )
+	{
+		cancelReason = reason == null ? "" : reason;
+	}
+
+	@Override
+	public String getCancelReason()
+	{
+		return cancelReason;
+	}
+
 }

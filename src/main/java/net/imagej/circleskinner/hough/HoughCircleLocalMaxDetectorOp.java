@@ -82,6 +82,9 @@ public class HoughCircleLocalMaxDetectorOp< T extends RealType< T > & NativeType
 		};
 		final ArrayList< Circle > peaks = LocalExtrema.findLocalExtrema( input, maximumCheck, threadService.getExecutorService() );
 
+		if ( isCanceled() )
+			return Collections.emptyList();
+
 		/*
 		 * Non-maxima suppression.
 		 * 
@@ -105,6 +108,9 @@ public class HoughCircleLocalMaxDetectorOp< T extends RealType< T > & NativeType
 			retained.add( tested );
 		}
 
+		if ( isCanceled() )
+			return Collections.emptyList();
+
 		/*
 		 * Refine local extrema.
 		 */
@@ -113,6 +119,9 @@ public class HoughCircleLocalMaxDetectorOp< T extends RealType< T > & NativeType
 		spl.setAllowMaximaTolerance( true );
 		spl.setMaxNumMoves( 10 );
 		final ArrayList< RefinedPeak< Circle > > refined = spl.process( retained, input, input );
+
+		if ( isCanceled() )
+			return Collections.emptyList();
 
 		/*
 		 * Create circles.
@@ -134,6 +143,30 @@ public class HoughCircleLocalMaxDetectorOp< T extends RealType< T > & NativeType
 
 		Collections.sort( circles );
 		return circles;
+	}
+
+	// -- Cancelable methods --
+
+	/** Reason for cancelation, or null if not canceled. */
+	private String cancelReason;
+
+	@Override
+	public boolean isCanceled()
+	{
+		return cancelReason != null;
+	}
+
+	/** Cancels the command execution, with the given reason for doing so. */
+	@Override
+	public void cancel( final String reason )
+	{
+		cancelReason = reason == null ? "" : reason;
+	}
+
+	@Override
+	public String getCancelReason()
+	{
+		return cancelReason;
 	}
 
 	/**
