@@ -410,7 +410,7 @@ public class AdjustThresholdDialog< T extends RealType< T > & NativeType< T > > 
 		int w1 = filteredImp.getWindow().getWidth();
 		int h1 = filteredImp.getWindow().getHeight();
 		int nZoomOut = 0;
-		while ( w1 + x >= ws / 2 || h1 + y > hs / 2 )
+		while ( nZoomOut < 4 && w1 + x >= ws / 2 || h1 + y > hs / 2 )
 		{
 			nZoomOut++;
 			filteredImp.getCanvas().zoomOut( w1 / 2, h1 / 2 );
