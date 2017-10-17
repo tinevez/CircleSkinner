@@ -11,8 +11,6 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -24,13 +22,12 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
-import javax.swing.AbstractAction;
 import javax.swing.Action;
 import javax.swing.ButtonGroup;
-import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -70,6 +67,7 @@ import io.scif.services.FormatService;
 import net.imagej.Dataset;
 import net.imagej.ImageJ;
 import net.imagej.circleskinner.CircleSkinnerOp;
+import net.imagej.circleskinner.CircleSkinnerOp.DetectionMethod;
 import net.imagej.circleskinner.hough.HoughCircle;
 import net.imagej.circleskinner.util.EverythingDisablerAndReenabler;
 import net.imagej.circleskinner.util.HoughCircleOverlay;
@@ -185,6 +183,8 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 
 	private int stepRadius = 2;
 
+	private DetectionMethod detectionMethod = DetectionMethod.FAST;
+
 	private boolean limitDetectionNumber = DEFAULT_LIMIT_DETECTION_NUMBER;
 
 	private int maxNDetections = DEFAULT_MAX_N_DETECTIONS;
@@ -231,6 +231,7 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		this.minRadius = prefs.getInt( CircleSkinnerGUI.class, "minRadius", DEFAULT_MIN_RADIUS );
 		this.maxRadius = prefs.getInt( CircleSkinnerGUI.class, "maxRadius", DEFAULT_MAX_RADIUS );
 		this.stepRadius = prefs.getInt( CircleSkinnerGUI.class, "stepRadius", DEFAULT_STEP_RADIUS );
+		this.detectionMethod = DetectionMethod.valueOf( prefs.get( CircleSkinnerGUI.class, "detectionMethod", DetectionMethod.FAST.name() ) );
 		this.limitDetectionNumber = prefs.getBoolean( CircleSkinnerGUI.class, "limitDetectionNumber", DEFAULT_LIMIT_DETECTION_NUMBER );
 		this.maxNDetections = prefs.getInt( CircleSkinnerGUI.class, "maxNDetections", DEFAULT_MAX_N_DETECTIONS );
 		this.analysisTarget = AnalysisTarget.valueOf( prefs.get( CircleSkinnerGUI.class,
@@ -680,6 +681,37 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 				spinnerMaxNDetections.setEnabled( chckbxLimitNumberOf.isSelected() );
 			}
 		} );
+
+		final JLabel lblDetectionMethod = new JLabel( "Detection method" );
+		final GridBagConstraints gbc_lblDetectionMethod = new GridBagConstraints();
+		gbc_lblDetectionMethod.anchor = GridBagConstraints.EAST;
+		gbc_lblDetectionMethod.insets = new Insets( 5, 5, 5, 5 );
+		gbc_lblDetectionMethod.gridx = 0;
+		gbc_lblDetectionMethod.gridy = 3;
+		gbc_lblDetectionMethod.gridwidth = 2;
+		advancedParametersCollapsible.add( lblDetectionMethod, gbc_lblDetectionMethod );
+
+		final JComboBox< DetectionMethod > jComboBoxDetectionMethod = new JComboBox<>( DetectionMethod.values() );
+		jComboBoxDetectionMethod.setSelectedItem( detectionMethod );
+		jComboBoxDetectionMethod.addActionListener( new ActionListener()
+		{
+
+			@Override
+			public void actionPerformed( final ActionEvent e )
+			{
+				detectionMethod = ( DetectionMethod ) jComboBoxDetectionMethod.getSelectedItem();
+				prefs.put( CircleSkinnerGUI.class, "detectionMethod", detectionMethod.name() );
+			}
+		} );
+
+		final GridBagConstraints gbc_jComboBoxDetectionMethod = new GridBagConstraints();
+		gbc_jComboBoxDetectionMethod.anchor = GridBagConstraints.WEST;
+		gbc_jComboBoxDetectionMethod.insets = new Insets( 5, 5, 5, 5 );
+		gbc_jComboBoxDetectionMethod.gridx = 2;
+		gbc_jComboBoxDetectionMethod.gridy = 3;
+		advancedParametersCollapsible.add( jComboBoxDetectionMethod, gbc_jComboBoxDetectionMethod );
+
+
 		parametersPanel.add( advancedParametersCollapsible );
 
 		/*
@@ -948,6 +980,7 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 			messages.add( " - Do not limit the number of detections" );
 		else
 			messages.add( String.format( " - Limit the number of detections to: %d", maxNDetections ) );
+		messages.add( String.format( " - Detection method: %s", detectionMethod.toString() ) );
 		messages.add( "" );
 
 		final long start = System.currentTimeMillis();
@@ -1185,6 +1218,7 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 				minRadius,
 				maxRadius,
 				stepRadius,
+				detectionMethod,
 				opService.getContext() );
 		adjustSensitivityDialog.addActionListener( new ActionListener()
 		{
@@ -1246,6 +1280,7 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 				maxRadius,
 				stepRadius,
 				maxND,
+				detectionMethod,
 				true,
 				false );
 		circleSkinner.compute( dataset, resultsTable );
@@ -1296,61 +1331,6 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		public String toString()
 		{
 			return str;
-		}
-	}
-
-	private static final Icon EXPAND_ICON = UIManager.getIcon( "Tree.expandedIcon" );
-
-	private static final Icon COLLAPSE_ICON = UIManager.getIcon( "Tree.collapsedIcon" );
-
-	/**
-	 * Toggles the JXCollapsiblePane state and updates its icon based on the
-	 * JXCollapsiblePane "collapsed" status.
-	 */
-	private class ToggleAction extends AbstractAction implements PropertyChangeListener
-	{
-
-		private final JXCollapsiblePane target;
-
-		public ToggleAction( final JXCollapsiblePane target )
-		{
-			super( JXCollapsiblePane.TOGGLE_ACTION );
-			this.target = target;
-			target.addPropertyChangeListener( "collapsed", this );
-		}
-
-		@Override
-		public void putValue( final String key, final Object newValue )
-		{
-			super.putValue( key, newValue );
-			if ( EXPAND_ICON.equals( key ) || COLLAPSE_ICON.equals( key ) )
-			{
-				updateIcon();
-			}
-		}
-
-		@Override
-		public void actionPerformed( final ActionEvent e )
-		{
-			target.setCollapsed( !target.isCollapsed() );
-		}
-
-		@Override
-		public void propertyChange( final PropertyChangeEvent evt )
-		{
-			updateIcon();
-		}
-
-		void updateIcon()
-		{
-			if ( target.isCollapsed() )
-			{
-				putValue( SMALL_ICON, EXPAND_ICON );
-			}
-			else
-			{
-				putValue( SMALL_ICON, COLLAPSE_ICON );
-			}
 		}
 	}
 

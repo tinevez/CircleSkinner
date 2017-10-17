@@ -51,6 +51,7 @@ import net.imagej.ImgPlus;
 import net.imagej.axis.Axes;
 import net.imagej.axis.AxisType;
 import net.imagej.circleskinner.CircleSkinnerOp;
+import net.imagej.circleskinner.CircleSkinnerOp.DetectionMethod;
 import net.imagej.circleskinner.hough.HoughCircle;
 import net.imagej.circleskinner.util.DisplayUpdater;
 import net.imagej.circleskinner.util.EverythingDisablerAndReenabler;
@@ -119,6 +120,8 @@ public class AdjustSensitivityDialog< T extends RealType< T > & NativeType< T > 
 
 	private final int stepRadius;
 
+	private final DetectionMethod detectionMethod;
+
 	private final Context context;
 
 	private final DisplayUpdater overlayUpdater = new DisplayUpdater()
@@ -155,6 +158,7 @@ public class AdjustSensitivityDialog< T extends RealType< T > & NativeType< T > 
 			final int minRadius,
 			final int maxRadius,
 			final int stepRadius,
+			final DetectionMethod detectionMethod,
 			final Context context )
 	{
 		this.source = source;
@@ -165,6 +169,7 @@ public class AdjustSensitivityDialog< T extends RealType< T > & NativeType< T > 
 		this.minRadius = minRadius;
 		this.maxRadius = maxRadius;
 		this.stepRadius = stepRadius;
+		this.detectionMethod = detectionMethod;
 		this.context = context;
 		context.inject( this );
 		initialize();
@@ -374,6 +379,7 @@ public class AdjustSensitivityDialog< T extends RealType< T > & NativeType< T > 
 				maxRadius,
 				stepRadius,
 				Integer.MAX_VALUE,
+				detectionMethod,
 				false,
 				keepVoteImg );
 		circleSkinner.compute( dataset, table );
