@@ -136,6 +136,12 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 	 */
 	private Img< DoubleType > voteImg;
 
+	/**
+	 * Stores the percentage (from 0 to 100) of pixels retained in the
+	 * thresholded image.
+	 */
+	private double percentPixelsInThresholded;
+
 	/*
 	 * METHODS.
 	 */
@@ -148,6 +154,11 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 	public Img< DoubleType > getVoteImg()
 	{
 		return voteImg;
+	}
+
+	public double getPercentPixelsInThresholded()
+	{
+		return percentPixelsInThresholded;
 	}
 
 	public static final ResultsTable createResulsTable()
@@ -298,6 +309,8 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 		final DoubleType otsuThreshold = ops.threshold().otsu( histo );
 		otsuThreshold.mul( thresholdFactor / 100. );
 		final IterableInterval< BitType > thresholded = ops.threshold().apply( H, otsuThreshold );
+
+		percentPixelsInThresholded = 100. * ops().stats().sum( thresholded ).getRealDouble() / thresholded.size();
 
 		/*
 		 * Hough transform

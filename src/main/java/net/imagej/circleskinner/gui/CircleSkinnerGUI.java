@@ -1013,6 +1013,9 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 			messages.update();
 
 			final List< HoughCircle > circles = processImage( dataset, resultsTable );
+			messages.add( String.format( " - Thresholded image retained %.2f%% pixels.", circleSkinner.getPercentPixelsInThresholded() ) );
+			messages.add( String.format( " - Found %d circles.", circles.size() ) );
+			messages.update();
 			if ( null != imp )
 			{
 				final Overlay overlay = new Overlay();
@@ -1149,6 +1152,8 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 					imp = ImageJFunctions.wrap( ( Img< T > ) dataset.getImgPlus(), dataset.getName() );
 
 				final List< HoughCircle > circles = processImage( dataset, resultsTable );
+				messages.add( String.format( " - Thresholded image retained %.2f%% pixels.", circleSkinner.getPercentPixelsInThresholded() ) );
+				messages.add( String.format( " - Found %d circles.", circles.size() ) );
 
 				if ( saveSnapshot )
 				{
