@@ -1130,6 +1130,9 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		messages.add( "" );
 		for ( final File file : files )
 		{
+			if ( circleSkinner != null && circleSkinner.isCanceled() )
+				return;
+
 			if ( !file.exists() || !file.isFile() )
 				continue;
 
