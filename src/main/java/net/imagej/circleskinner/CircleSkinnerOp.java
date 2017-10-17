@@ -116,14 +116,15 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 	@Parameter( label = "Max number of detections", min = "0", type = ItemIO.INPUT )
 	private int maxNDetections = Integer.MAX_VALUE;
 
+	@Parameter( label = "Detection method", required = false, type = ItemIO.INPUT )
+	private DetectionMethod detectionMethod = DetectionMethod.FAST;
+
 	@Parameter( label = "Show results table", required = false, type = ItemIO.INPUT )
 	private boolean showResultsTable = false;
 
 	@Parameter( label = "Keep last vote image", required = false, type = ItemIO.INPUT )
 	private boolean doKeepVoteImg = false;
 
-	@Parameter( label = "Detection method", required = false, type = ItemIO.INPUT )
-	private DetectionMethod detectionMethod = DetectionMethod.FAST;
 
 	/*
 	 * OUTPUT PARAMETERS.
@@ -398,22 +399,31 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 
 	public static enum DetectionMethod
 	{
-		FAST( HoughCircleLocalMaxDetectorOp.class ),
-		ACCURATE( HoughCircleDogDetectorOp.class );
+		FAST( HoughCircleLocalMaxDetectorOp.class, "Fast" ),
+		ACCURATE( HoughCircleDogDetectorOp.class, "Accurate" );
 
 		@SuppressWarnings( "rawtypes" )
 		private final Class< ? extends HoughCircleDetectorOp > opClass;
 
+		private final String name;
+
 		@SuppressWarnings( "rawtypes" )
-		private DetectionMethod( final Class< ? extends HoughCircleDetectorOp > opClass )
+		private DetectionMethod( final Class< ? extends HoughCircleDetectorOp > opClass, final String name )
 		{
 			this.opClass = opClass;
+			this.name = name;
 		}
 
 		@SuppressWarnings( "rawtypes" )
 		public Class< ? extends HoughCircleDetectorOp > getOpClass()
 		{
 			return opClass;
+		}
+
+		@Override
+		public String toString()
+		{
+			return name;
 		}
 	}
 }
