@@ -6,9 +6,7 @@ import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Ellipse2D;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import ij.ImagePlus;
 import ij.gui.Roi;
@@ -20,7 +18,7 @@ public class HoughCircleOverlay extends Roi
 
 	private static final ColorMap CM = ColorMap.jet();
 
-	private final Map< Integer, List< HoughCircle > > circleMap;
+	private List< HoughCircle > circles;
 
 	private final double maxSensitivity;
 
@@ -33,26 +31,12 @@ public class HoughCircleOverlay extends Roi
 		super( 0, 0, imp );
 		this.maxSensitivity = maxSensitivity;
 		this.minSensitivity = maxSensitivity / 10.;
-		this.circleMap = new HashMap<>();
 		this.sensitivity = maxSensitivity;
 	}
 
-	/**
-	 * 
-	 * @param circles
-	 *            list of circles to display, sorted by increasing sensitivity.
-	 * @param channel
-	 *            the channel to display them on, 0-based.
-	 */
-	public void setCircles(final List< HoughCircle > circles, final int channel)
+	public void setCircles( final List< HoughCircle > circles )
 	{
-		circleMap.put( channel, circles );
-		imp.updateAndDraw();
-	}
-	
-	public void setCircles( final Map< Integer, List< HoughCircle > > circles )
-	{
-		circleMap.putAll( circles );
+		this.circles = circles;
 		imp.updateAndDraw();
 	}
 
@@ -66,12 +50,10 @@ public class HoughCircleOverlay extends Roi
 		final double magnification = getMagnification();
 		g2d.setStroke( new BasicStroke( ( float ) ( 1. / magnification ) ) );
 
-		final int c = imp.getC() - 1;
 		final AffineTransform transform = g2d.getTransform();
 		g2d.scale( magnification, magnification );
 		g2d.setFont( g2d.getFont().deriveFont( 18f ) );
 
-		final List< HoughCircle > circles = circleMap.get( Integer.valueOf( c ) );
 		if ( null != circles && !circles.isEmpty() )
 		{
 			int circleIndex = 0;

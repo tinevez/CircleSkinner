@@ -90,9 +90,9 @@ public class HoughCircle extends RealPoint implements Comparable< HoughCircle >
 		return Math.PI * ( radMax * radMax - radMin * radMin );
 	}
 
-	public void setStats( final double mean, final double std, final int N, final double median )
+	public void setStats( final double[] means, final double[] stds, final int N, final double[] medians )
 	{
-		this.stats = new Stats( mean, std, N, median );
+		this.stats = new Stats( means, stds, N, medians );
 	}
 
 	public Stats getStats()
@@ -103,20 +103,20 @@ public class HoughCircle extends RealPoint implements Comparable< HoughCircle >
 	public static final class Stats
 	{
 
-		public final double mean;
+		public final double[] mean;
 
-		public final double std;
+		public final double[] std;
 
 		public final int N;
 
-		public final double median;
+		public final double[] median;
 
-		public Stats( final double mean, final double std, final int n, final double median )
+		public Stats( final double[] means, final double[] stds, final int n, final double[] medians )
 		{
-			this.mean = mean;
-			this.std = std;
+			this.mean = means;
+			this.std = stds;
 			this.N = n;
-			this.median = median;
+			this.median = medians;
 		}
 	}
 }

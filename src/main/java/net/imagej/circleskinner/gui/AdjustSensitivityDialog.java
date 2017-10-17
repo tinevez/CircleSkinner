@@ -13,7 +13,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 import javax.swing.JButton;
@@ -384,7 +383,7 @@ public class AdjustSensitivityDialog< T extends RealType< T > & NativeType< T > 
 				keepVoteImg );
 		circleSkinner.compute( dataset, table );
 
-		final Map< Integer, List< HoughCircle > > circles = circleSkinner.getCircles();
+		final List< HoughCircle > circles = circleSkinner.getCircles();
 		this.voteImg = new ImgPlus<>( circleSkinner.getVoteImg(), "Vote image",
 				new AxisType[] { Axes.X, Axes.Y, Axes.Z } );
 
@@ -392,16 +391,15 @@ public class AdjustSensitivityDialog< T extends RealType< T > & NativeType< T > 
 		 * Collect sensitivity values.
 		 */
 
-		final List< HoughCircle > c = circles.get( Integer.valueOf( 0 ) );
-		if ( null == c || c.isEmpty() )
+		if ( null == circles || circles.isEmpty() )
 		{
 			this.sensitivities = new double[] { CircleSkinnerGUI.MAX_SENSITIVITY };
 		}
 		else
 		{
-			this.sensitivities = new double[ c.size() ];
+			this.sensitivities = new double[ circles.size() ];
 			for ( int i = 0; i < sensitivities.length; i++ )
-				sensitivities[ i ] = c.get( i ).getSensitivity();
+				sensitivities[ i ] = circles.get( i ).getSensitivity();
 		}
 
 		createHistogram( sensitivities );

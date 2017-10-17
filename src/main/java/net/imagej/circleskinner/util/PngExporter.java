@@ -2,7 +2,6 @@ package net.imagej.circleskinner.util;
 
 import java.io.File;
 import java.util.List;
-import java.util.Map;
 
 import ij.CompositeImage;
 import ij.IJ;
@@ -31,16 +30,13 @@ public class PngExporter
 		}
 	}
 
-	public static final void exportToPng( ImagePlus imp, final String saveFolder, final Map< Integer, List< HoughCircle > > circles )
+	public static final void exportToPng( ImagePlus imp, final String saveFolder, final List< HoughCircle > circles )
 	{
 		double maxSensitivity = Double.NEGATIVE_INFINITY;
-		for ( final Integer channelIndex : circles.keySet() )
+		for ( final HoughCircle circle : circles )
 		{
-			for ( final HoughCircle circle : circles.get( channelIndex ) )
-			{
-				if ( circle.getSensitivity() > maxSensitivity )
-					maxSensitivity = circle.getSensitivity();
-			}
+			if ( circle.getSensitivity() > maxSensitivity )
+				maxSensitivity = circle.getSensitivity();
 		}
 
 		final Overlay overlay = new Overlay();
@@ -60,7 +56,7 @@ public class PngExporter
 			IJ.run( imp, "Enhance Contrast", "saturated=0.1" );
 
 			// Add it to channel 0 to have it saved as PNG properly.
-			circleOverlay.setCircles( circles.get( Integer.valueOf( c ) ), 0 );
+			circleOverlay.setCircles( circles );
 			imp.updateAndDraw();
 
 			final String name = imp.getTitle().substring( 0, imp.getTitle().lastIndexOf( '.' ) ) + "-channel_" + ( c + 1 ) + ".png";

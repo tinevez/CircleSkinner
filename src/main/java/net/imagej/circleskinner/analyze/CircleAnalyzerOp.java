@@ -1,6 +1,7 @@
 package net.imagej.circleskinner.analyze;
 
 import java.util.Collection;
+import java.util.List;
 
 import org.apache.commons.math3.stat.descriptive.moment.Mean;
 import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
@@ -19,7 +20,7 @@ import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 
 @Plugin( type = CircleAnalyzerOp.class )
-public class CircleAnalyzerOp< T extends RealType< T > > extends AbstractBinaryInplace1Op< Collection< HoughCircle >, RandomAccessibleInterval< T > >
+public class CircleAnalyzerOp< T extends RealType< T > > extends AbstractBinaryInplace1Op< Collection< HoughCircle >, List< RandomAccessibleInterval< T > > >
 {
 
 	@Override
@@ -30,7 +31,7 @@ public class CircleAnalyzerOp< T extends RealType< T > > extends AbstractBinaryI
 	}
 
 	@Override
-	public void mutate1( final Collection< HoughCircle > arg, final RandomAccessibleInterval< T > in )
+	public void mutate1( final Collection< HoughCircle > arg, final List< RandomAccessibleInterval< T > > in )
 	{
 		for ( final HoughCircle circle : arg )
 			processCircle( circle );
@@ -42,29 +43,46 @@ public class CircleAnalyzerOp< T extends RealType< T > > extends AbstractBinaryI
 		checkOverlap( circle );
 
 		final Interval interval = toInterval( circle );
-		final IntervalView< T > roi = Views.interval( in2(), interval );
-		final Cursor< T > cursor = roi.localizingCursor();
 
-		final int initCapacity = ( int ) ( 2. * circle.area() ); // Conservative
-		final ResizableDoubleArray arr = new ResizableDoubleArray(initCapacity);
+		final List< RandomAccessibleInterval< T > > channels = in2();
+		final int nChannels = channels.size();
+		final double[] means = new double[ nChannels ];
+		final double[] stds = new double[ nChannels ];
+		final double[] medians = new double[ nChannels ];
 
-		while ( cursor.hasNext() )
+		int N = -1;
+		for ( int i = 0; i < nChannels; i++ )
 		{
-			cursor.fwd();
-			if ( circle.contains( cursor ) )
-				arr.addElement( cursor.get().getRealDouble() );
+			final RandomAccessibleInterval< T > channel = channels.get( i );
+			final IntervalView< T > roi = Views.interval( channel, interval );
+			final Cursor< T > cursor = roi.localizingCursor();
+
+			final int initCapacity = ( int ) ( 2. * circle.area() ); // Conservative
+			final ResizableDoubleArray arr = new ResizableDoubleArray( initCapacity );
+
+			while ( cursor.hasNext() )
+			{
+				cursor.fwd();
+				if ( circle.contains( cursor ) )
+					arr.addElement( cursor.get().getRealDouble() );
+			}
+			final double[] vals = arr.getElements();
+			N = vals.length;
+
+			final Mean meanCal = new Mean();
+			final double mean = meanCal.evaluate( vals );
+			final StandardDeviation stdCalc = new StandardDeviation();
+			final double std = stdCalc.evaluate( vals, mean );
+			final Median medianCalc = new Median();
+			final double median = medianCalc.evaluate( vals );
+
+			means[ i ] = mean;
+			stds[ i ] = std;
+			medians[ i ] = median;
+
 		}
-		final double[] vals = arr.getElements();
+		circle.setStats( means, stds, N, medians );
 
-		final Mean meanCal = new Mean();
-		final double mean = meanCal.evaluate( vals );
-		final StandardDeviation stdCalc = new StandardDeviation();
-		final double std = stdCalc.evaluate( vals, mean );
-		final Median medianCalc = new Median();
-		final double median = medianCalc.evaluate( vals );
-		final int N = vals.length;
-
-		circle.setStats( mean, std, N, median );
 	}
 
 	/**
@@ -84,11 +102,11 @@ public class CircleAnalyzerOp< T extends RealType< T > > extends AbstractBinaryI
 
 		final long minX = Math.max( 0l,
 				Double.valueOf( Math.floor( x - radius - thickness / 2. ) ).longValue() );
-		final long maxX = Math.min( in2().dimension( 0 ) - 1l,
+		final long maxX = Math.min( in2().get( 0 ).dimension( 0 ) - 1l,
 				Double.valueOf( Math.floor( x + radius + thickness / 2. ) ).longValue() );
 		final long minY = Math.max( 0l,
 				Double.valueOf( Math.floor( y - radius - thickness / 2. ) ).longValue() );
-		final long maxY = Math.min( in2().dimension( 1 ) - 1l,
+		final long maxY = Math.min( in2().get( 0 ).dimension( 1 ) - 1l,
 				Double.valueOf( Math.floor( y + radius + thickness / 2. ) ).longValue() );
 
 		return Intervals.createMinMax( minX, minY, maxX, maxY );

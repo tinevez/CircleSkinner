@@ -3,9 +3,7 @@ package net.imagej.circleskinner;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.scijava.Cancelable;
 import org.scijava.ItemIO;
@@ -46,7 +44,7 @@ import net.imglib2.view.Views;
 public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryComputerOp< Dataset, ResultsTable > implements Cancelable
 {
 	private static final String SOURCE_NAME_COLUMN = "Image";
-	private static final String CHANEL_COLUMN = "Channel";
+	private static final String CHANNEL_TEXT = "Ch";
 	private static final String CIRCLE_ID_COLUMN = "Circle #";
 	private static final String CIRCLE_X_COLUMN = "X (pixels)";
 	private static final String CIRCLE_Y_COLUMN = "Y (pixels)";
@@ -130,8 +128,8 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 	 * OUTPUT PARAMETERS.
 	 */
 
-	@Parameter( label = "Detected circles", type = ItemIO.OUTPUT, description = "The map of detected circles per channel in the source image." )
-	private Map< Integer, List< HoughCircle > > circles;
+	@Parameter( label = "Detected circles", type = ItemIO.OUTPUT, description = "The list of detected circles in the source image." )
+	private List< HoughCircle > circles;
 
 	/**
 	 * Storage for the vote image.
@@ -142,7 +140,7 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 	 * METHODS.
 	 */
 
-	public Map< Integer, List< HoughCircle > > getCircles()
+	public List< HoughCircle > getCircles()
 	{
 		return circles;
 	}
@@ -167,8 +165,6 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 		if ( null == table )
 			table = createResulsTable();
 
-		circles = new HashMap<>();
-
 		@SuppressWarnings( "unchecked" )
 		final ImgPlus< T > img = ( ImgPlus< T > ) source.getImgPlus();
 
@@ -187,10 +183,9 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 		// Process proper channel.
 		if (cId < 0)
 		{
-			final List< HoughCircle > circ = segmentCircles( img.getImg() );
-			analyzeCircles( img.getImg(), circ );
-			circles.put( Integer.valueOf( 0 ), circ );
-			appendResults( circ, table, source.getName(), 1 );
+			circles = segmentCircles( img.getImg() );
+			analyzeCircles( Collections.singletonList( img.getImg() ), circles );
+			appendResults( circles, table, source.getName() );
 		}
 		else
 		{
@@ -203,28 +198,24 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 
 			@SuppressWarnings( "unchecked" )
 			final IntervalView< T > segmentationChannel = ( IntervalView< T > ) Views.hyperSlice( source.getImgPlus().getImg(), cId, targetChannel );
-			final List< HoughCircle > circ = segmentCircles( segmentationChannel );
+			circles = segmentCircles( segmentationChannel );
 
 			/*
 			 * Measure in all channels.
 			 */
 
+			final List< RandomAccessibleInterval< T > > channels = new ArrayList<>( ( int ) source.getChannels() );
 			for ( int c = 0; c < source.getChannels(); c++ )
 			{
 				@SuppressWarnings( "unchecked" )
 				final IntervalView< T > analysisChannel = ( IntervalView< T > ) Views.hyperSlice( source.getImgPlus().getImg(), cId, c );
-
-				// Duplicate circles.
-				final List< HoughCircle > circDuplicate = new ArrayList<>( circ.size() );
-				for ( final HoughCircle circle : circ )
-					circDuplicate.add( circle.copy() );
-
-				// Analyze.
-				analyzeCircles( analysisChannel, circDuplicate );
-
-				circles.put( Integer.valueOf( c ), circDuplicate );
-				appendResults( circDuplicate, table, source.getName(), c + 1 );
+				channels.add( analysisChannel );
 			}
+
+			// Analyze.
+			analyzeCircles( channels, circles );
+
+			appendResults( circles, table, source.getName() );
 		}
 
 		statusService.clearStatus();
@@ -232,7 +223,7 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 			voteImg = null;
 	}
 
-	private void appendResults( final List< HoughCircle > circles, final ResultsTable table, final String name, final long channel )
+	private void appendResults( final List< HoughCircle > circles, final ResultsTable table, final String name )
 	{
 		int circleId = 0;
 		for ( final HoughCircle circle : circles )
@@ -240,7 +231,6 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 			table.incrementCounter();
 
 			table.addValue( SOURCE_NAME_COLUMN, name );
-			table.addValue( CHANEL_COLUMN, channel );
 
 			table.addValue( CIRCLE_ID_COLUMN, ++circleId );
 			table.addValue( CIRCLE_X_COLUMN, circle.getDoublePosition( 0 ) );
@@ -250,10 +240,15 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 			final Stats stats = circle.getStats();
 			if ( null != stats )
 			{
-				table.addValue( CIRCLE_MEAN_COLUMN, stats.mean );
-				table.addValue( CIRCLE_STD_COLUMN, stats.std );
+				final int nChannels = stats.mean.length;
+				for ( int channel = 0; channel < nChannels; channel++ )
+				{
+					final String prefix = CHANNEL_TEXT + ( channel + 1 ) + " ";
+					table.addValue( prefix + CIRCLE_MEAN_COLUMN, stats.mean[ channel ] );
+					table.addValue( prefix + CIRCLE_STD_COLUMN, stats.std[ channel ] );
+					table.addValue( prefix + CIRCLE_MEDIAN_COLUMN, stats.median[ channel ] );
+				}
 				table.addValue( CIRCLE_N_COLUMN, stats.N );
-				table.addValue( CIRCLE_MEDIAN_COLUMN, stats.median );
 			}
 
 			table.addValue( CIRCLE_SENSITIVITY_COLUMN, circle.getSensitivity() );
@@ -356,18 +351,18 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 	 * channel. The {@link HoughCircle.Stats} value of each circle is altered.
 	 * Other fields are left untouched.
 	 *
-	 * @param analysisChannel
-	 *            the channel to use for pixel value measurement.
+	 * @param channels
+	 *            the list of channels to use for pixel value measurement.
 	 * @param circles
 	 *            the circles to analyse.
 	 */
-	private void analyzeCircles(final RandomAccessibleInterval< T > analysisChannel, final Collection<HoughCircle> circles)
+	private void analyzeCircles( final List< RandomAccessibleInterval< T > > channels, final Collection< HoughCircle > circles )
 	{
 		statusService.showStatus( "Analysing circles..." );
 
 		@SuppressWarnings( { "rawtypes", "unchecked" } )
 		final CircleAnalyzerOp< T > circleAnalyzerOp =
-				( CircleAnalyzerOp ) Inplaces.binary1( ops, CircleAnalyzerOp.class, circles, analysisChannel );
+				( CircleAnalyzerOp ) Inplaces.binary1( ops, CircleAnalyzerOp.class, circles, channels );
 		circleAnalyzerOp.run();
 	}
 

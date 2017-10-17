@@ -19,7 +19,6 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 import javax.swing.Action;
@@ -1013,7 +1012,7 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 			messages.add( "Processing " + dataset );
 			messages.update();
 
-			final Map< Integer, List< HoughCircle > > circles = processImage( dataset, resultsTable );
+			final List< HoughCircle > circles = processImage( dataset, resultsTable );
 			if ( null != imp )
 			{
 				final Overlay overlay = new Overlay();
@@ -1149,7 +1148,7 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 				if ( saveSnapshot )
 					imp = ImageJFunctions.wrap( ( Img< T > ) dataset.getImgPlus(), dataset.getName() );
 
-				final Map< Integer, List< HoughCircle > > circles = processImage( dataset, resultsTable );
+				final List< HoughCircle > circles = processImage( dataset, resultsTable );
 
 				if ( saveSnapshot )
 				{
@@ -1266,7 +1265,7 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 	 */
 
 	@SuppressWarnings( "unchecked" )
-	private Map< Integer, List< HoughCircle > > processImage( final Dataset dataset, final ResultsTable resultsTable )
+	private List< HoughCircle > processImage( final Dataset dataset, final ResultsTable resultsTable )
 	{
 		final int maxND = limitDetectionNumber ? maxNDetections : Integer.MAX_VALUE;
 
