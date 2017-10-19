@@ -1,6 +1,7 @@
 package net.imagej.circleskinner;
 
 import java.util.Iterator;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 
 import org.scijava.Cancelable;
@@ -9,13 +10,13 @@ import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 import org.scijava.thread.ThreadService;
 
-import net.imagej.circleskinner.hessian.HessianMatrix;
-import net.imagej.circleskinner.hessian.TensorEigenValues;
 import net.imagej.ops.special.computer.AbstractUnaryComputerOp;
 import net.imagej.ops.special.hybrid.AbstractUnaryHybridCF;
 import net.imglib2.Dimensions;
 import net.imglib2.FinalDimensions;
 import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.algorithm.gradient.HessianMatrix;
+import net.imglib2.algorithm.linalg.eigen.TensorEigenValues;
 import net.imglib2.exception.IncompatibleTypeException;
 import net.imglib2.img.Img;
 import net.imglib2.img.ImgFactory;
@@ -71,12 +72,21 @@ public class TubenessOp< T extends RealType< T > >
 		 */
 
 		// Get a suitable image factory.
-		final long[] dims = new long[ numDimensions + 1 ];
+		final long[] gradientDims = new long[ numDimensions + 1 ];
+		final long[] hessianDims = new long[ numDimensions + 1 ];
 		for ( int d = 0; d < numDimensions; d++ )
-			dims[ d ] = input.dimension( d );
-		dims[ numDimensions ] = numDimensions * ( numDimensions + 1 ) / 2;
-		final Dimensions dimensions = FinalDimensions.wrap( dims );
-		final ImgFactory< DoubleType > factory = ops().create().imgFactory( dimensions );
+		{
+			hessianDims[ d ] = input.dimension( d );
+			gradientDims[ d ] = input.dimension( d );
+		}
+		hessianDims[ numDimensions ] = numDimensions * ( numDimensions + 1 ) / 2;
+		gradientDims[ numDimensions ] = numDimensions;
+		final Dimensions hessianDimensions = FinalDimensions.wrap( hessianDims );
+		final FinalDimensions gradientDimensions = FinalDimensions.wrap( gradientDims );
+		final ImgFactory< DoubleType > factory = ops().create().imgFactory( hessianDimensions );
+		final Img< DoubleType > hessian = factory.create( hessianDimensions, new DoubleType() );
+		final Img< DoubleType > gradient = factory.create( gradientDimensions, new DoubleType() );
+		final Img< DoubleType > gaussian = factory.create( input, new DoubleType() );
 		
 		// Handle multithreading.
 		final int nThreads = Runtime.getRuntime().availableProcessors();
@@ -85,22 +95,22 @@ public class TubenessOp< T extends RealType< T > >
 		try
 		{
 			// Hessian calculation.
-			final Img< DoubleType > hessian = HessianMatrix.calculateMatrix(
+			HessianMatrix.calculateMatrix(
 					Views.extendBorder( input ),
-					input, 
-					sigmas, 
-					new OutOfBoundsBorderFactory<>(), 
-					factory, new DoubleType(), 
-					nThreads, es );
+					gaussian,
+					gradient,
+					hessian,
+					new OutOfBoundsBorderFactory<>(),
+					nThreads, es, sigma );
 
 			statusService.showProgress( 1, 3 );
 			if ( isCanceled() )
 				return;
 
 			// Hessian eigenvalues.
-			final Img< DoubleType > evs = TensorEigenValues.calculateEigenValuesSymmetric(
+			final RandomAccessibleInterval< DoubleType > evs = TensorEigenValues.calculateEigenValuesSymmetric(
 					hessian,
-					factory, new DoubleType(),
+					TensorEigenValues.createAppropriateResultImg( hessian, factory, new DoubleType() ),
 					nThreads, es );
 
 			statusService.showProgress( 2, 3 );
@@ -125,7 +135,7 @@ public class TubenessOp< T extends RealType< T > >
 
 			return;
 		}
-		catch ( final IncompatibleTypeException e )
+		catch ( final IncompatibleTypeException | InterruptedException | ExecutionException e )
 		{
 			e.printStackTrace();
 			return;
