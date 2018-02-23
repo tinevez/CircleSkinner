@@ -10,7 +10,7 @@
 	</parent>
 
 	<artifactId>CircleSkinner</artifactId>
-	<version>1.5.2-SNAPSHOT</version>
+	<version>1.5.2</version>
 
 	<name>plugins/CircleSkinner_.jar</name>
 	<description>A Fiji plugin for the automated detection and quantification of circular structure in images.</description>
