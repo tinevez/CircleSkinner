@@ -115,6 +115,7 @@ public class TubenessOp< T extends RealType< T > >
 				break;
 			case 3:
 				method = new Tubeness3D( sigma );
+				break;
 			default:
 				System.err.println( "Cannot compute tubeness for " + numDimensions + "D images." );
 				return;

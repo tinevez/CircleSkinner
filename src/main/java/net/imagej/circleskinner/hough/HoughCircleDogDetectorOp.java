@@ -54,7 +54,7 @@ public class HoughCircleDogDetectorOp< T extends RealType< T > & NativeType< T >
 		final double threshold = 2. * Math.PI * minRadius * circleThickness / sensitivity;
 		final double sigma = circleThickness / Math.sqrt( numDimensions );
 		final double[] calibration = Util.getArrayFromValue( 1., numDimensions );
-		final DogDetection< T > dog = new DogDetection< T >(
+		final DogDetection< T > dog = new DogDetection<>(
 				Views.extendZero( input ),
 				input,
 				calibration,

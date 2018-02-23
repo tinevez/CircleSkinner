@@ -29,16 +29,16 @@ public class RealCompositeSquareMatrix< T extends RealType< T > > extends RealCo
 	}
 
 	@Override
-	public RealMatrix createMatrix( final int nRows, final int nCols ) throws NotStrictlyPositiveException
+	public RealMatrix createMatrix( final int aNRows, final int aNCols ) throws NotStrictlyPositiveException
 	{
-		if ( nRows != nCols ) { throw new UnsupportedOperationException( "Number of colums and number of rows must be the same!" ); }
-		return super.createMatrix( nRows, nCols );
+		if ( aNRows != aNCols ) { throw new UnsupportedOperationException( "Number of colums and number of rows must be the same!" ); }
+		return super.createMatrix( aNRows, aNCols );
 	}
 
 	@Override
-	public < U extends RealType< U > > RealCompositeMatrix< U > createMatrix( final RealComposite< U > data, final int nRows, final int nCols, final int length )
+	public < U extends RealType< U > > RealCompositeMatrix< U > createMatrix( final RealComposite< U > aData, final int aNRows, final int aNCols, final int aLength )
 	{
-		return new RealCompositeSymmetricMatrix<>( data, nRows, length );
+		return new RealCompositeSymmetricMatrix<>( aData, aNRows, aLength );
 	}
 
 }

@@ -65,27 +65,23 @@ public class RealCompositeMatrix< T extends RealType< T > > extends AbstractReal
 
 	@SuppressWarnings( { "unchecked", "rawtypes" } )
 	@Override
-	public RealMatrix createMatrix( final int nRows, final int nCols ) throws NotStrictlyPositiveException
+	public RealMatrix createMatrix( final int aNRows, final int aNCols ) throws NotStrictlyPositiveException
 	{
 		final T t = this.data.get( 0 );
 		final Img< T > img;
-		final int length = expectedLength( nRows, nCols );
+		final int aLength = expectedLength( aNRows, aNCols );
 		if ( NativeType.class.isInstance( t ) )
-		{
-			img = ( ( NativeType ) t ).createSuitableNativeImg( new ArrayImgFactory<>(), new long[] { length } );
-		}
+			img = ( ( NativeType ) t ).createSuitableNativeImg( new ArrayImgFactory<>(), new long[] { aLength } );
 		else
-		{
-			img = new ListImgFactory< T >().create( new long[] { length }, t );
-		}
-		final RealComposite< T > data = new RealComposite< T >( img.randomAccess(), length );
+			img = new ListImgFactory< T >().create( new long[] { aLength }, t );
 
-		return createMatrix( data, nRows, nCols, length );
+		final RealComposite< T > aData = new RealComposite<>( img.randomAccess(), aLength );
+		return createMatrix( aData, aNRows, aNCols, aLength );
 	}
 
-	public < U extends RealType< U > > RealCompositeMatrix< U > createMatrix( final RealComposite< U > data, final int nRows, final int nCols, final int length )
+	public < U extends RealType< U > > RealCompositeMatrix< U > createMatrix( final RealComposite< U > aData, final int aNRows, final int aNCols, final int aLength )
 	{
-		return new RealCompositeMatrix<>( data, nRows, nCols, length );
+		return new RealCompositeMatrix<>( aData, aNRows, aNCols, aLength );
 	}
 
 	@Override
@@ -133,10 +129,8 @@ public class RealCompositeMatrix< T extends RealType< T > > extends AbstractReal
 		return row * nCols + col;
 	}
 
-	public int expectedLength( final int nRows, final int nCols )
+	public int expectedLength( final int aNRows, final int aNCols )
 	{
-		return nRows * nCols;
+		return aNRows * aNCols;
 	}
-
-
 }

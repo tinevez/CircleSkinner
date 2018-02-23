@@ -443,11 +443,11 @@ public class AdjustSensitivityDialog< T extends RealType< T > & NativeType< T > 
 		newImp.getWindow().setLocation( x, y );
 	}
 
-	private ChartPanel createHistogram( final double[] sensitivities )
+	private ChartPanel createHistogram( final double[] aSensitivities )
 	{
 		final HistogramDataset dataset = new HistogramDataset();
 		dataset.setType( HistogramType.RELATIVE_FREQUENCY );
-		dataset.addSeries( "Sensitivities", sensitivities, 50 );
+		dataset.addSeries( "Sensitivities", aSensitivities, 50 );
 		final String plotTitle = null; // "Sensitivity histogram";
 		final String xaxis = "Sensitivity";
 		final String yaxis = "#";
@@ -487,7 +487,7 @@ public class AdjustSensitivityDialog< T extends RealType< T > & NativeType< T > 
 		plot.addDomainMarker( intervalMarker );
 
 		final ChartPanel panel = new ChartPanel( chart );
-		panel.setPreferredSize( new Dimension( 0, 0 ) );;
+		panel.setPreferredSize( new Dimension( 0, 0 ) );
 
 		final GridBagConstraints gbc_histoPanel = new GridBagConstraints();
 		gbc_histoPanel.gridwidth = 1;

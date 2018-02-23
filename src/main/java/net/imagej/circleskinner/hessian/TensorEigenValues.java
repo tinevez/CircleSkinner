@@ -38,6 +38,10 @@ public class TensorEigenValues
 	 */
 	public interface EigenValues
 	{
+		/**
+		 * @param matrix  
+		 * @param evs 
+		 */
 		default public < T extends RealType< T >, U extends RealType< U > > void compute( final RealComposite< T > matrix, final RealComposite< U > evs )
 		{
 			throw new UnsupportedOperationException( "EigenValues not implemented yet!" );
@@ -773,19 +777,14 @@ public class TensorEigenValues
 				}
 				catch ( final ExecutionException e )
 				{
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			}
 		}
 		catch ( final InterruptedException e )
 		{
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-
-
-
 	}
 
 	private static < T extends RealType< T >, U extends RealType< U > > void calculateEigenValuesImpl(

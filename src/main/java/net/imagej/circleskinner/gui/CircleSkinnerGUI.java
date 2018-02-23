@@ -15,7 +15,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.text.SimpleDateFormat;
+import java.text.DateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -289,16 +289,16 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 								reenabler.reenable();
 								get();
 							}
-							catch ( final ExecutionException e )
+							catch ( final ExecutionException ee )
 							{
-								e.getCause().printStackTrace();
+								ee.getCause().printStackTrace();
 								final String msg = String.format( "Unexpected problem: %s",
-										e.getCause().toString() );
+										ee.getCause().toString() );
 								log.error( msg );
 							}
-							catch ( final InterruptedException e )
+							catch ( final InterruptedException ie )
 							{
-								e.printStackTrace();
+								ie.printStackTrace();
 							}
 
 						}
@@ -315,7 +315,7 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 
 		final JLabel lblTitle = new JLabel( PLUGIN_NAME + " v" + PLUGIN_VERSION );
 		lblTitle.setFont( panel.getFont().deriveFont( Font.BOLD ).deriveFont( 15f ) );
-		lblTitle.setHorizontalAlignment( JLabel.CENTER );
+		lblTitle.setHorizontalAlignment( SwingConstants.CENTER );
 		lblTitle.setPreferredSize( new Dimension( 50, 50 ) );
 		panel.add( lblTitle, BorderLayout.NORTH );
 
@@ -954,7 +954,7 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 
 		messages.add( "" );
 		messages.add( "____________________________________" );
-		messages.add( PLUGIN_NAME + " started on " + SimpleDateFormat.getInstance().format( new Date() ) );
+		messages.add( PLUGIN_NAME + " started on " + DateFormat.getInstance().format( new Date() ) );
 		switch ( analysisTarget )
 		{
 		case CURRENT_IMAGE:
@@ -1081,7 +1081,7 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 	}
 
 	@SuppressWarnings( "unchecked" )
-	private void processFolder( final File sourceFolder, final ResultsTable resultsTable )
+	private void processFolder( final File sourceFolder, final ResultsTable aResultsTable )
 	{
 		/*
 		 * Inspect source folder.
@@ -1154,11 +1154,11 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 				if ( saveSnapshot )
 					imp = ImageJFunctions.wrap( ( Img< T > ) dataset.getImgPlus(), dataset.getName() );
 
-				final List< HoughCircle > circles = processImage( dataset, resultsTable );
+				final List< HoughCircle > circles = processImage( dataset, aResultsTable );
 				messages.add( String.format( " - Thresholded image retained %.2f%% pixels.", circleSkinner.getPercentPixelsInThresholded() ) );
 				messages.add( String.format( " - Found %d circles.", circles.size() ) );
 
-				if ( saveSnapshot )
+				if ( saveSnapshot && null != imp )
 				{
 					imp.show();
 					PngExporter.exportToPng( imp, saveFolder, circles );
@@ -1273,11 +1273,11 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 	 */
 
 	@SuppressWarnings( "unchecked" )
-	private List< HoughCircle > processImage( final Dataset dataset, final ResultsTable resultsTable )
+	private List< HoughCircle > processImage( final Dataset dataset, final ResultsTable aResultsTable )
 	{
 		final int maxND = limitDetectionNumber ? maxNDetections : Integer.MAX_VALUE;
 
-		this.circleSkinner = ( CircleSkinnerOp< T > ) Computers.unary( opService, CircleSkinnerOp.class, resultsTable,
+		this.circleSkinner = ( CircleSkinnerOp< T > ) Computers.unary( opService, CircleSkinnerOp.class, aResultsTable,
 				dataset,
 				segmentationChannel - 1l,
 				circleThickness,

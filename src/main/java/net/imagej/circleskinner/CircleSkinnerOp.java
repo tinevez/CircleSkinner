@@ -208,8 +208,8 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 			 */
 
 			@SuppressWarnings( "unchecked" )
-			final IntervalView< T > segmentationChannel = ( IntervalView< T > ) Views.hyperSlice( source.getImgPlus().getImg(), cId, targetChannel );
-			circles = segmentCircles( segmentationChannel );
+			final IntervalView< T > aSegmentationChannel = ( IntervalView< T > ) Views.hyperSlice( source.getImgPlus().getImg(), cId, targetChannel );
+			circles = segmentCircles( aSegmentationChannel );
 
 			/*
 			 * Measure in all channels.
@@ -234,10 +234,10 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 			voteImg = null;
 	}
 
-	private void appendResults( final List< HoughCircle > circles, final ResultsTable table, final String name )
+	private void appendResults( final List< HoughCircle > aCircles, final ResultsTable table, final String name )
 	{
 		int circleId = 0;
-		for ( final HoughCircle circle : circles )
+		for ( final HoughCircle circle : aCircles )
 		{
 			table.incrementCounter();
 
@@ -276,13 +276,13 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 	 * to the parameters of this Op. The {@link HoughCircle} objects have not
 	 * been analyzed yet.
 	 *
-	 * @param segmentationChannel
+	 * @param aSegmentationChannel
 	 *            the channel to segment as a RAI.
 	 * @return the list of circles ordered by increasing sensitivity.
 	 */
-	private List< HoughCircle > segmentCircles( final RandomAccessibleInterval< T > segmentationChannel )
+	private List< HoughCircle > segmentCircles( final RandomAccessibleInterval< T > aSegmentationChannel )
 	{
-		final double sigma = circleThickness / 2. / Math.sqrt( segmentationChannel.numDimensions() );
+		final double sigma = circleThickness / 2. / Math.sqrt( aSegmentationChannel.numDimensions() );
 
 		/*
 		 * Filter using tubeness.
@@ -293,9 +293,9 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 		@SuppressWarnings( { "rawtypes", "unchecked" } )
 		final TubenessOp< T > tubenessOp =
 				( TubenessOp ) Functions.unary( ops, TubenessOp.class, RandomAccessibleInterval.class,
-						segmentationChannel, sigma, Util.getArrayFromValue( 1., segmentationChannel.numDimensions() ) );
+						aSegmentationChannel, sigma, Util.getArrayFromValue( 1., aSegmentationChannel.numDimensions() ) );
 		this.cancelableOp = tubenessOp;
-		final Img< DoubleType > H = tubenessOp.calculate( segmentationChannel );
+		final Img< DoubleType > H = tubenessOp.calculate( aSegmentationChannel );
 		if ( isCanceled() )
 			return Collections.emptyList();
 
@@ -345,7 +345,7 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 				( HoughCircleDetectorOp ) Functions.unary( ops, detectionMethod.getOpClass(), List.class,
 						voteImg, circleThickness, minRadius, stepRadius, sensitivity );
 		this.cancelableOp = houghDetectOp;
-		List< HoughCircle > circles = houghDetectOp.calculate( voteImg );
+		List< HoughCircle > aCircles = houghDetectOp.calculate( voteImg );
 		if ( isCanceled() )
 			return Collections.emptyList();
 
@@ -353,29 +353,29 @@ public class CircleSkinnerOp< T extends RealType< T > > extends AbstractUnaryCom
 		 * Limit number of detections.
 		 */
 
-		if ( circles.size() > maxNDetections )
-			circles = new ArrayList<>( circles.subList( 0, maxNDetections ) );
+		if ( aCircles.size() > maxNDetections )
+			aCircles = new ArrayList<>( aCircles.subList( 0, maxNDetections ) );
 
-		return circles;
+		return aCircles;
 	}
 
 	/**
 	 * Gets measurements results for the specified circles on the specified
-	 * channel. The {@link HoughCircle.Stats} value of each circle is altered.
+	 * channel. The {@link net.imagej.circleskinner.hough.HoughCircle.Stats} value of each circle is altered.
 	 * Other fields are left untouched.
 	 *
 	 * @param channels
 	 *            the list of channels to use for pixel value measurement.
-	 * @param circles
+	 * @param aCircles
 	 *            the circles to analyse.
 	 */
-	private void analyzeCircles( final List< RandomAccessibleInterval< T > > channels, final Collection< HoughCircle > circles )
+	private void analyzeCircles( final List< RandomAccessibleInterval< T > > channels, final Collection< HoughCircle > aCircles )
 	{
 		statusService.showStatus( "Analysing circles..." );
 
 		@SuppressWarnings( { "rawtypes", "unchecked" } )
 		final CircleAnalyzerOp< T > circleAnalyzerOp =
-				( CircleAnalyzerOp ) Inplaces.binary1( ops, CircleAnalyzerOp.class, circles, channels );
+				( CircleAnalyzerOp ) Inplaces.binary1( ops, CircleAnalyzerOp.class, aCircles, channels );
 		circleAnalyzerOp.run();
 	}
 

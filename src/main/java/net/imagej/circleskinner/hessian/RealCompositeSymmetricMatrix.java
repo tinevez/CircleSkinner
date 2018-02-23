@@ -34,15 +34,15 @@ public class RealCompositeSymmetricMatrix< T extends RealType< T > > extends Rea
 	}
 
 	@Override
-	public int expectedLength( final int nRows, final int nCols )
+	public int expectedLength( final int aNRows, final int aNCols )
 	{
-		return nRows * ( nRows + 1 ) / 2;
+		return aNRows * ( aNRows + 1 ) / 2;
 	}
 
 	@Override
-	public < U extends RealType< U > > RealCompositeMatrix< U > createMatrix( final RealComposite< U > data, final int nRows, final int nCols, final int length )
+	public < U extends RealType< U > > RealCompositeMatrix< U > createMatrix( final RealComposite< U > aData, final int aNRows, final int aNCols, final int aLength )
 	{
-		return new RealCompositeSymmetricMatrix<>( data, nRows );
+		return new RealCompositeSymmetricMatrix<>( aData, aNRows );
 	}
 
 	@Override
@@ -61,12 +61,9 @@ public class RealCompositeSymmetricMatrix< T extends RealType< T > > extends Rea
 			final int n = rowDiff * ( rowDiff + 1 ) / 2;
 			return length - n + col - row;
 		}
-		else
-		{
-			final int rowDiff = nRows - col;
-			final int n = rowDiff * ( rowDiff + 1 ) / 2;
-			return length - n + row - col;
-		}
+		
+		final int rowDiff = nRows - col;
+		final int n = rowDiff * ( rowDiff + 1 ) / 2;
+		return length - n + row - col;
 	}
-
 }
