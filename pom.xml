@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.scijava</groupId>
 		<artifactId>pom-scijava</artifactId>
-		<version>17.1.1</version>
+		<version>19.2.0</version>
 		<relativePath />
 	</parent>
 
@@ -79,6 +79,7 @@
 		<main-class>net.imagej.circleskinner.CircleSkinner</main-class>
 		<license.licenseName>bsd_2</license.licenseName>
 		<license.copyrightOwners>My Company, Inc.</license.copyrightOwners>
+		<imagej.app.directory>../Fiji.app</imagej.app.directory>
 	</properties>
 
 	<repositories>
@@ -129,9 +130,9 @@
 			<artifactId>jfreechart</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.swinglabs</groupId>
+			<groupId>org.swinglabs.swingx</groupId>
 			<artifactId>swingx-core</artifactId>
-			<version>1.6.2-2</version>
+			<version>1.6.5-1</version>
 		</dependency>
 	</dependencies>
 </project>
