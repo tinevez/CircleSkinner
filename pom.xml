@@ -79,7 +79,6 @@
 		<main-class>net.imagej.circleskinner.CircleSkinner</main-class>
 		<license.licenseName>bsd_2</license.licenseName>
 		<license.copyrightOwners>My Company, Inc.</license.copyrightOwners>
-		<imagej.app.directory>../Fiji.app</imagej.app.directory>
 	</properties>
 
 	<repositories>
