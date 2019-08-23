@@ -5,11 +5,14 @@ import org.apache.commons.math3.exception.OutOfRangeException;
 import org.apache.commons.math3.linear.AbstractRealMatrix;
 import org.apache.commons.math3.linear.RealMatrix;
 
+import net.imglib2.Dimensions;
+import net.imglib2.FinalDimensions;
 import net.imglib2.img.Img;
 import net.imglib2.img.array.ArrayImgFactory;
 import net.imglib2.img.list.ListImgFactory;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
+import net.imglib2.util.Util;
 import net.imglib2.view.composite.RealComposite;
 
 /**
@@ -68,12 +71,9 @@ public class RealCompositeMatrix< T extends RealType< T > > extends AbstractReal
 	public RealMatrix createMatrix( final int aNRows, final int aNCols ) throws NotStrictlyPositiveException
 	{
 		final T t = this.data.get( 0 );
-		final Img< T > img;
 		final int aLength = expectedLength( aNRows, aNCols );
-		if ( NativeType.class.isInstance( t ) )
-			img = ( ( NativeType ) t ).createSuitableNativeImg( new ArrayImgFactory<>(), new long[] { aLength } );
-		else
-			img = new ListImgFactory< T >().create( new long[] { aLength }, t );
+		final Dimensions dims = new FinalDimensions( aLength );
+		final Img< T > img = Util.getSuitableImgFactory( dims, t ).create( dims );
 
 		final RealComposite< T > aData = new RealComposite<>( img.randomAccess(), aLength );
 		return createMatrix( aData, aNRows, aNCols, aLength );
