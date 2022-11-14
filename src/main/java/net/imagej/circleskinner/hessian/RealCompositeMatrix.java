@@ -8,9 +8,6 @@ import org.apache.commons.math3.linear.RealMatrix;
 import net.imglib2.Dimensions;
 import net.imglib2.FinalDimensions;
 import net.imglib2.img.Img;
-import net.imglib2.img.array.ArrayImgFactory;
-import net.imglib2.img.list.ListImgFactory;
-import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.util.Util;
 import net.imglib2.view.composite.RealComposite;
@@ -66,7 +63,6 @@ public class RealCompositeMatrix< T extends RealType< T > > extends AbstractReal
 		return result;
 	}
 
-	@SuppressWarnings( { "unchecked", "rawtypes" } )
 	@Override
 	public RealMatrix createMatrix( final int aNRows, final int aNCols ) throws NotStrictlyPositiveException
 	{
