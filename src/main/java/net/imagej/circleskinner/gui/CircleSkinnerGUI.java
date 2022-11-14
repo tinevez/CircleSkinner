@@ -47,13 +47,13 @@ import org.jdesktop.swingx.VerticalLayout;
 import org.scijava.command.Command;
 import org.scijava.display.Display;
 import org.scijava.display.DisplayService;
+import org.scijava.io.location.FileLocation;
+import org.scijava.io.location.Location;
 import org.scijava.log.LogService;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 import org.scijava.prefs.PrefService;
 import org.scijava.ui.UIService;
-
-import com.jidesoft.swing.RangeSlider;
 
 import ij.ImagePlus;
 import ij.WindowManager;
@@ -558,36 +558,31 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		gbc_spinnerMaxRadius.gridy = 0;
 		advancedParametersCollapsible.add( spinnerMaxRadius, gbc_spinnerMaxRadius );
 
-		final RangeSlider rangeSlider = new RangeSlider( 5, 300, minRadius, maxRadius );
-		rangeSlider.setMinorTickSpacing( 25 );
-		rangeSlider.setMajorTickSpacing( 100 );
-		rangeSlider.setPaintLabels( true );
-		rangeSlider.setPaintTicks( true );
-
-		spinnerMinRadius.addChangeListener( ( e ) -> rangeSlider.setLowValue( ( int ) spinnerMinRadius.getValue() ) );
+		final RangeSlider rangeSlider = new RangeSlider( 5, 300 );
+		rangeSlider.setValue( minRadius );
+		rangeSlider.setUpperValue( maxRadius );
 		rangeSlider.addChangeListener( new ChangeListener()
 		{
 
 			@Override
 			public void stateChanged( final ChangeEvent e )
 			{
-				minRadius = rangeSlider.getLowValue();
+
+				final int minVal = rangeSlider.getValue();
+				final int maxVal = rangeSlider.getUpperValue();
+
+				minRadius = minVal;
 				prefs.put( CircleSkinnerGUI.class, "minRadius", minRadius );
-				spinnerMinRadius.setValue( rangeSlider.getLowValue() );
-			}
-		} );
-		spinnerMaxRadius.addChangeListener( ( e ) -> rangeSlider.setHighValue( ( int ) spinnerMaxRadius.getValue() ) );
-		rangeSlider.addChangeListener( new ChangeListener()
-		{
+				spinnerMinRadius.setValue( minVal );
 
-			@Override
-			public void stateChanged( final ChangeEvent e )
-			{
-				maxRadius = rangeSlider.getHighValue();
+				maxRadius = maxVal;
 				prefs.put( CircleSkinnerGUI.class, "maxRadius", maxRadius );
-				spinnerMaxRadius.setValue( rangeSlider.getHighValue() );
+				spinnerMaxRadius.setValue( maxVal );
 			}
 		} );
+
+		spinnerMinRadius.addChangeListener( ( e ) -> rangeSlider.setValue( ( int ) spinnerMinRadius.getValue() ) );
+		spinnerMaxRadius.addChangeListener( ( e ) -> rangeSlider.setUpperValue( ( int ) spinnerMaxRadius.getValue() ) );
 
 		final GridBagConstraints gbc_rangeSlider = new GridBagConstraints();
 		gbc_rangeSlider.fill = GridBagConstraints.HORIZONTAL;
@@ -1136,7 +1131,7 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 			if ( !file.exists() || !file.isFile() )
 				continue;
 
-			if ( !canOpen( file.getAbsolutePath() ) )
+			if ( !canOpen( new FileLocation( file ) ) )
 			{
 				messages.add( "File " + file + " is not in a supported format." );
 				messages.update();
@@ -1259,7 +1254,7 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 				if ( !file.exists() || !file.isFile() )
 					continue;
 
-				if ( canOpen( file.getAbsolutePath() ) )
+				if ( canOpen( new FileLocation( file ) ) )
 					nImages++;
 			}
 
@@ -1305,7 +1300,7 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		label.setText( infoFiles );
 	}
 
-	private boolean canOpen( final String source )
+	private boolean canOpen( final Location source )
 	{
 		try
 		{
