@@ -260,8 +260,6 @@ public class TensorEigenValues
 	 *
 	 * @param factory
 	 *            {@link ImgFactory} used for creating the result image.
-	 * @param u
-	 *            Variable necessary for creation of result image.
 	 * @return {@link Img} containing sorted eigenvalues.
 	 */
 	public static < T extends RealType< T >, U extends RealType< U > > Img< U > calculateEigenValuesSquare(
@@ -283,8 +281,6 @@ public class TensorEigenValues
 	 *
 	 * @param factory
 	 *            {@link ImgFactory} used for creating the result image.
-	 * @param u
-	 *            Variable necessary for creation of result image.
 	 * @param nThreads
 	 *            Number of threads/workers used for parallel computation of
 	 *            eigenvalues.
@@ -310,8 +306,6 @@ public class TensorEigenValues
 	 *
 	 * @param factory
 	 *            {@link ImgFactory} used for creating the result image.
-	 * @param u
-	 *            Variable necessary for creation of result image.
 	 * @param nThreads
 	 *            Number of threads/workers used for parallel computation of
 	 *            eigenvalues.
@@ -346,8 +340,6 @@ public class TensorEigenValues
 	 * @param ev
 	 *            Implementation that specifies how to calculate eigenvalues
 	 *            from last dimension of input.
-	 * @param u
-	 *            Variable necessary for creation of result image.
 	 * @return {@link Img} containing sorted eigenvalues.
 	 */
 	public static < T extends RealType< T >, U extends RealType< U > > Img< U > calculateEigenValues(
