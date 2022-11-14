@@ -21,7 +21,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ExecutionException;
 
-import javax.swing.Action;
+import javax.swing.AbstractAction;
+import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
@@ -42,8 +43,6 @@ import javax.swing.UIManager;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
-import org.jdesktop.swingx.JXCollapsiblePane;
-import org.jdesktop.swingx.VerticalLayout;
 import org.scijava.command.Command;
 import org.scijava.display.Display;
 import org.scijava.display.DisplayService;
@@ -310,7 +309,9 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		panelButtons.add( btnRun );
 
 		final JPanel parametersPanel = new JPanel();
-		parametersPanel.setLayout( new VerticalLayout( 5 ) );
+		parametersPanel.setLayout( new BoxLayout( parametersPanel, BoxLayout.PAGE_AXIS ) );
+		parametersPanel.addPropertyChangeListener( ( e ) -> pack() );
+
 		panel.add( parametersPanel, BorderLayout.CENTER );
 
 		final JLabel lblTitle = new JLabel( PLUGIN_NAME + " v" + PLUGIN_VERSION );
@@ -323,22 +324,27 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		 * Parameters.
 		 */
 
-		final JXCollapsiblePane parametersCollapsible = new JXCollapsiblePane();
-		parametersCollapsible.addPropertyChangeListener( ( e ) -> pack() );
-		parametersCollapsible.setAnimated( false );
-
+		final JPanel parametersCollapsible = new JPanel();
 		final GridBagLayout gbl_parametersPanel = new GridBagLayout();
 		gbl_parametersPanel.columnWidths = new int[] { 100, 70, 100, 70 };
 		gbl_parametersPanel.columnWeights = new double[] { 0.1, 0.15, 0.6, 0.15 };
 		parametersCollapsible.setLayout( gbl_parametersPanel );
 
-		final Action toggleParametersPanelAction = parametersCollapsible.getActionMap().get( JXCollapsiblePane.TOGGLE_ACTION );
-		toggleParametersPanelAction.putValue( JXCollapsiblePane.COLLAPSE_ICON, UIManager.getIcon( "Tree.expandedIcon" ) );
-		toggleParametersPanelAction.putValue( JXCollapsiblePane.EXPAND_ICON, UIManager.getIcon( "Tree.collapsedIcon" ) );
+		final JButton toggleParameters = new JButton();
+		toggleParameters.setAction( new AbstractAction( "Parameters:" )
+		{
 
-		final JButton toggleParameters = new JButton( toggleParametersPanelAction );
-		toggleParameters.setText( "Parameters:" );
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			public void actionPerformed( final ActionEvent e )
+			{
+				parametersCollapsible.setVisible( !parametersCollapsible.isVisible() );
+				pack();
+			}
+		} );
 		toggleParameters.setFont( panel.getFont().deriveFont( Font.BOLD ).deriveFont( 13f ) );
+		toggleParameters.setAlignmentX( 0f );
 		parametersPanel.add( toggleParameters );
 
 		final JLabel lblSegmentationChannel = new JLabel( "Segmentation channel" );
@@ -510,28 +516,38 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 				spinnerSentivity.setValue( sliderSensitivity.getValue() );
 			}
 		} );
+		parametersCollapsible.setAlignmentX( 0f );
 		parametersPanel.add( parametersCollapsible );
 
 		/*
 		 * Advanced parameters.
 		 */
 
-		final JXCollapsiblePane advancedParametersCollapsible = new JXCollapsiblePane();
-		advancedParametersCollapsible.setCollapsed( true );
+		final JPanel advancedParametersCollapsible = new JPanel();
 		advancedParametersCollapsible.addPropertyChangeListener( ( e ) -> pack() );
-		advancedParametersCollapsible.setAnimated( false );
-		final Action toggleAdvancedParametersPanelAction = advancedParametersCollapsible.getActionMap().get( JXCollapsiblePane.TOGGLE_ACTION );
-		toggleAdvancedParametersPanelAction.putValue( JXCollapsiblePane.COLLAPSE_ICON, UIManager.getIcon( "Tree.expandedIcon" ) );
-		toggleAdvancedParametersPanelAction.putValue( JXCollapsiblePane.EXPAND_ICON, UIManager.getIcon( "Tree.collapsedIcon" ) );
 
 		final GridBagLayout gbl_advancedParametersPanel = new GridBagLayout();
 		gbl_advancedParametersPanel.columnWidths = new int[] { 100, 70, 100, 70 };
 		gbl_advancedParametersPanel.columnWeights = new double[] { 0.1, 0.15, 0.6, 0.15 };
 		advancedParametersCollapsible.setLayout( gbl_advancedParametersPanel );
 
-		final JButton toggleAdvancedParameters = new JButton( toggleAdvancedParametersPanelAction );
-		toggleAdvancedParameters.setText( "Advanced parameters:" );
+		final JButton toggleAdvancedParameters = new JButton();
+		toggleAdvancedParameters.setAction( new AbstractAction( "Advanced parameters:" )
+		{
+
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			public void actionPerformed( final ActionEvent e )
+			{
+				advancedParametersCollapsible.setVisible( !advancedParametersCollapsible.isVisible() );
+				pack();
+			}
+		} );
+		advancedParametersCollapsible.setVisible( false );
+
 		toggleAdvancedParameters.setFont( panel.getFont().deriveFont( Font.BOLD ).deriveFont( 13f ) );
+		toggleAdvancedParameters.setAlignmentX( 0f );
 		parametersPanel.add( toggleAdvancedParameters );
 
 		final JLabel lblMinMax = new JLabel( "Min & Max radius (pixels)" );
@@ -704,7 +720,7 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		gbc_jComboBoxDetectionMethod.gridx = 2;
 		gbc_jComboBoxDetectionMethod.gridy = 3;
 		advancedParametersCollapsible.add( jComboBoxDetectionMethod, gbc_jComboBoxDetectionMethod );
-
+		advancedParametersCollapsible.setAlignmentX( 0f );
 
 		parametersPanel.add( advancedParametersCollapsible );
 
@@ -712,22 +728,30 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		 * Manual adjusters.
 		 */
 
-		final JXCollapsiblePane manualAdjustmentCollapsible = new JXCollapsiblePane();
-		manualAdjustmentCollapsible.setCollapsed( true );
+		final JPanel manualAdjustmentCollapsible = new JPanel();
 		manualAdjustmentCollapsible.addPropertyChangeListener( ( e ) -> pack() );
-		manualAdjustmentCollapsible.setAnimated( false );
-		final Action toggleManualAdjustmentPanelAction = manualAdjustmentCollapsible.getActionMap().get( JXCollapsiblePane.TOGGLE_ACTION );
-		toggleManualAdjustmentPanelAction.putValue( JXCollapsiblePane.COLLAPSE_ICON, UIManager.getIcon( "Tree.expandedIcon" ) );
-		toggleManualAdjustmentPanelAction.putValue( JXCollapsiblePane.EXPAND_ICON, UIManager.getIcon( "Tree.collapsedIcon" ) );
 
 		final GridBagLayout gbl_manualAdjustmentsPanel = new GridBagLayout();
 		gbl_manualAdjustmentsPanel.columnWidths = new int[] { 100, 70, 100, 70 };
 		gbl_manualAdjustmentsPanel.columnWeights = new double[] { 0.1, 0.15, 0.6, 0.15 };
 		manualAdjustmentCollapsible.setLayout( gbl_manualAdjustmentsPanel );
 
-		final JButton toggleManualParameterAdjutments = new JButton( toggleManualAdjustmentPanelAction );
-		toggleManualParameterAdjutments.setText( "Manual parameter adjustments:" );
+		final JButton toggleManualParameterAdjutments = new JButton();
+		toggleManualParameterAdjutments.setAction( new AbstractAction( "Manual parameter adjustments:" )
+		{
+
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			public void actionPerformed( final ActionEvent e )
+			{
+				manualAdjustmentCollapsible.setVisible( !manualAdjustmentCollapsible.isVisible() );
+				pack();
+			}
+		} );
+		manualAdjustmentCollapsible.setVisible( false );
 		toggleManualParameterAdjutments.setFont( panel.getFont().deriveFont( Font.BOLD ).deriveFont( 13f ) );
+		toggleManualParameterAdjutments.setAlignmentX( 0f );
 		parametersPanel.add( toggleManualParameterAdjutments );
 
 		final JButton btnAdjustThreshold = new JButton( "Launch" );
@@ -767,27 +791,36 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 		gbc_lblAdjustDetectionSensitivity.gridx = 1;
 		gbc_lblAdjustDetectionSensitivity.gridy = 1;
 		manualAdjustmentCollapsible.add( lblAdjustDetectionSensitivity, gbc_lblAdjustDetectionSensitivity );
+		manualAdjustmentCollapsible.setAlignmentX( 0f );
 		parametersPanel.add( manualAdjustmentCollapsible );
 
 		/*
 		 * Analysis target.
 		 */
 
-		final JXCollapsiblePane analysisTargetCollapsible = new JXCollapsiblePane();
+		final JPanel analysisTargetCollapsible = new JPanel();
 		analysisTargetCollapsible.addPropertyChangeListener( ( e ) -> pack() );
-		analysisTargetCollapsible.setAnimated( false );
-		final Action toggleAnalysisTargetPanelAction = analysisTargetCollapsible.getActionMap().get( JXCollapsiblePane.TOGGLE_ACTION );
-		toggleAnalysisTargetPanelAction.putValue( JXCollapsiblePane.COLLAPSE_ICON, UIManager.getIcon( "Tree.expandedIcon" ) );
-		toggleAnalysisTargetPanelAction.putValue( JXCollapsiblePane.EXPAND_ICON, UIManager.getIcon( "Tree.collapsedIcon" ) );
 
 		final GridBagLayout gbl_analysisTargetPanel = new GridBagLayout();
 		gbl_analysisTargetPanel.columnWidths = new int[] { 100, 70, 100, 70 };
 		gbl_analysisTargetPanel.columnWeights = new double[] { 0.1, 0.15, 0.6, 0.15 };
 		analysisTargetCollapsible.setLayout( gbl_analysisTargetPanel );
 
-		final JButton toggleAnalysisTarget = new JButton( toggleAnalysisTargetPanelAction );
-		toggleAnalysisTarget.setText( "Analysis target:" );
+		final JButton toggleAnalysisTarget = new JButton();
+		toggleAnalysisTarget.setAction( new AbstractAction( "Analysis target:" )
+		{
+
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			public void actionPerformed( final ActionEvent e )
+			{
+				analysisTargetCollapsible.setVisible( !analysisTargetCollapsible.isVisible() );
+				pack();
+			}
+		} );
 		toggleAnalysisTarget.setFont( panel.getFont().deriveFont( Font.BOLD ).deriveFont( 13f ) );
+		toggleAnalysisTarget.setAlignmentX( 0f );
 		parametersPanel.add( toggleAnalysisTarget );
 
 		final JLabel lblAnalyze = new JLabel( "Analyze" );
@@ -925,6 +958,7 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 				prefs.put( CircleSkinnerGUI.class, "folder", folder.getAbsolutePath() );
 			}
 		} );
+		analysisTargetCollapsible.setAlignmentX( 0f );
 		parametersPanel.add( analysisTargetCollapsible );
 
 		pack();
