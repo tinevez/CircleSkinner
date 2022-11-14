@@ -16,6 +16,7 @@ import net.imglib2.img.Img;
 import net.imglib2.img.ImgFactory;
 import net.imglib2.type.BooleanType;
 import net.imglib2.type.numeric.real.DoubleType;
+import net.imglib2.util.Util;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 
@@ -55,8 +56,8 @@ public class HoughTransformOp< T extends BooleanType< T > >
 			dims[ d ] = input.dimension( d );
 		dims[ numDimensions ] = nRadiuses;
 		final Dimensions dimensions = FinalDimensions.wrap( dims );
-		final ImgFactory< DoubleType > factory = ops().create().imgFactory( dimensions );
-		final Img< DoubleType > votes = factory.create( dimensions, new DoubleType() );
+		final ImgFactory< DoubleType > factory = Util.getArrayOrCellImgFactory( dimensions, new DoubleType() );
+		final Img< DoubleType > votes = factory.create( dimensions );
 		return votes;
 	}
 

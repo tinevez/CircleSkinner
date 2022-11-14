@@ -22,6 +22,7 @@ import net.imglib2.img.ImgFactory;
 import net.imglib2.outofbounds.OutOfBoundsBorderFactory;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.DoubleType;
+import net.imglib2.util.Util;
 import net.imglib2.view.Views;
 
 @Plugin( type = TubenessOp.class )
@@ -76,7 +77,7 @@ public class TubenessOp< T extends RealType< T > >
 			dims[ d ] = input.dimension( d );
 		dims[ numDimensions ] = numDimensions * ( numDimensions + 1 ) / 2;
 		final Dimensions dimensions = FinalDimensions.wrap( dims );
-		final ImgFactory< DoubleType > factory = ops().create().imgFactory( dimensions );
+		final ImgFactory< DoubleType > factory = Util.getArrayOrCellImgFactory( dimensions, new DoubleType() );
 		
 		// Handle multithreading.
 		final int nThreads = Runtime.getRuntime().availableProcessors();
@@ -90,7 +91,7 @@ public class TubenessOp< T extends RealType< T > >
 					input, 
 					sigmas, 
 					new OutOfBoundsBorderFactory<>(), 
-					factory, new DoubleType(), 
+					factory,
 					nThreads, es );
 
 			statusService.showProgress( 1, 3 );
@@ -100,7 +101,7 @@ public class TubenessOp< T extends RealType< T > >
 			// Hessian eigenvalues.
 			final Img< DoubleType > evs = TensorEigenValues.calculateEigenValuesSymmetric(
 					hessian,
-					factory, new DoubleType(),
+					factory,
 					nThreads, es );
 
 			statusService.showProgress( 2, 3 );
@@ -136,7 +137,7 @@ public class TubenessOp< T extends RealType< T > >
 	private static final class Tubeness2D extends AbstractUnaryComputerOp< Iterable< DoubleType >, DoubleType >
 	{
 
-		private double sigma;
+		private final double sigma;
 
 		public Tubeness2D( final double sigma )
 		{
@@ -161,7 +162,7 @@ public class TubenessOp< T extends RealType< T > >
 	private static final class Tubeness3D extends AbstractUnaryComputerOp< Iterable< DoubleType >, DoubleType >
 	{
 
-		private double sigma;
+		private final double sigma;
 
 		public Tubeness3D( final double sigma )
 		{
