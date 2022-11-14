@@ -13,6 +13,7 @@ import net.imglib2.exception.IncompatibleTypeException;
 import net.imglib2.img.Img;
 import net.imglib2.img.ImgFactory;
 import net.imglib2.outofbounds.OutOfBoundsFactory;
+import net.imglib2.parallel.Parallelization;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
@@ -84,9 +85,6 @@ public class HessianMatrix
 	 * @param factory
 	 *            {@link ImgFactory} used for creating the intermediate and
 	 *            result image.
-	 * @param u
-	 *            Variable necessary for creation of intermediate and result
-	 *            image.
 	 * @param nThreads
 	 *            number of threads to use.
 	 * @return n+1-dimensional {@link Img} holding linear representation of
@@ -105,7 +103,7 @@ public class HessianMatrix
 	{
 		final double[] sigmas = new double[ source.numDimensions() ];
 		Arrays.fill( sigmas, sigma );
-		return calculateMatrix( source, interval, sigmas, outOfBounds, factory, u, nThreads );
+		return calculateMatrix( source, interval, sigmas, outOfBounds, factory, nThreads );
 	}
 
 	/**
@@ -126,9 +124,6 @@ public class HessianMatrix
 	 * @param factory
 	 *            {@link ImgFactory} used for creating the intermediate and
 	 *            result image.
-	 * @param u
-	 *            Variable necessary for creation of intermediate and result
-	 *            image.
 	 * @param nThreads
 	 *            Number of threads/workers used for parallel computation of
 	 *            eigenvalues.
@@ -146,13 +141,12 @@ public class HessianMatrix
 			final double sigma,
 			final OutOfBoundsFactory< U, ? super RandomAccessibleInterval< U > > outOfBounds,
 			final ImgFactory< U > factory,
-			final U u,
 			final int nThreads,
 			final ExecutorService es ) throws IncompatibleTypeException
 	{
 		final double[] sigmas = new double[ source.numDimensions() ];
 		Arrays.fill( sigmas, sigma );
-		return calculateMatrix( source, interval, sigmas, outOfBounds, factory, u, nThreads, es );
+		return calculateMatrix( source, interval, sigmas, outOfBounds, factory, nThreads, es );
 	}
 
 	/**
@@ -173,9 +167,6 @@ public class HessianMatrix
 	 * @param factory
 	 *            {@link ImgFactory} used for creating the intermediate and
 	 *            result image.
-	 * @param u
-	 *            Variable necessary for creation of intermediate and result
-	 *            image.
 	 * @return n+1-dimensional {@link Img} holding linear representation of
 	 *         symmetric Hessian matrix in last dimension (size n * ( n + 1 ) /
 	 *         2): [h11, h12, ... , h1n, h22, h23, ... , hnn]
@@ -190,7 +181,7 @@ public class HessianMatrix
 			final U u ) throws IncompatibleTypeException
 	{
 		final int nThreads = Runtime.getRuntime().availableProcessors();
-		return calculateMatrix( source, interval, sigma, outOfBounds, factory, u, nThreads );
+		return calculateMatrix( source, interval, sigma, outOfBounds, factory, nThreads );
 	}
 
 	/**
@@ -211,9 +202,6 @@ public class HessianMatrix
 	 * @param factory
 	 *            {@link ImgFactory} used for creating the intermediate and
 	 *            result image.
-	 * @param u
-	 *            Variable necessary for creation of intermediate and result
-	 *            image.
 	 * @param nThreads
 	 *            Number of threads/workers used for parallel computation of
 	 *            eigenvalues.
@@ -228,11 +216,10 @@ public class HessianMatrix
 			final double[] sigma,
 			final OutOfBoundsFactory< U, ? super RandomAccessibleInterval< U > > outOfBounds,
 			final ImgFactory< U > factory,
-			final U u,
 			final int nThreads ) throws IncompatibleTypeException
 	{
 		final ExecutorService es = Executors.newFixedThreadPool( nThreads );
-		final Img< U > hessianMatrix = calculateMatrix( source, interval, sigma, outOfBounds, factory, u, nThreads, es );
+		final Img< U > hessianMatrix = calculateMatrix( source, interval, sigma, outOfBounds, factory, nThreads, es );
 		es.shutdown();
 		return hessianMatrix;
 	}
@@ -255,9 +242,6 @@ public class HessianMatrix
 	 * @param factory
 	 *            {@link ImgFactory} used for creating the intermediate and
 	 *            result image.
-	 * @param u
-	 *            Variable necessary for creation of intermediate and result
-	 *            image.
 	 * @param nThreads
 	 *            Number of threads/workers used for parallel computation of
 	 *            eigenvalues.
@@ -275,7 +259,6 @@ public class HessianMatrix
 			final double[] sigma,
 			final OutOfBoundsFactory< U, ? super RandomAccessibleInterval< U > > outOfBounds,
 			final ImgFactory< U > factory,
-			final U u,
 			final int nThreads,
 			final ExecutorService es ) throws IncompatibleTypeException
 	{
@@ -298,9 +281,9 @@ public class HessianMatrix
 		final long[] gradientDim = dimensions.clone();
 		gradientDim[ nDim ] = nDim;
 
-		final Img< U > gaussianConvolved = factory.create( interval, u );
-		final Img< U > gradient = factory.create( gradientDim, u );
-		final Img< U > hessianMatrix = factory.create( dimensions, u );
+		final Img< U > gaussianConvolved = factory.create( interval );
+		final Img< U > gradient = factory.create( gradientDim );
+		final Img< U > hessianMatrix = factory.create( dimensions );
 
 		calculateMatrix( source, gaussianConvolved, gradient, hessianMatrix, sigma, outOfBounds, nThreads, es );
 
@@ -556,7 +539,7 @@ public class HessianMatrix
 
 		final int nDim = source.numDimensions();
 
-		Gauss3.gauss( sigma, source, gaussianConvolved, es );
+		Parallelization.runWithExecutor( es, () -> Gauss3.gauss( sigma, source, gaussianConvolved ) );
 
 		for ( long d = 0; d < nDim; ++d )
 		{

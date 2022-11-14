@@ -154,17 +154,14 @@ public class TensorEigenValues
 	 *
 	 * @param factory
 	 *            {@link ImgFactory} used for creating the result image.
-	 * @param u
-	 *            Variable necessary for creation of result image.
 	 * @return {@link Img} containing sorted eigenvalues.
 	 */
 	public static < T extends RealType< T >, U extends RealType< U > > Img< U > calculateEigenValuesSymmetric(
 			final RandomAccessibleInterval< T > tensor,
-			final ImgFactory< U > factory,
-			final U u )
+			final ImgFactory< U > factory )
 	{
 		final int nThreads = Runtime.getRuntime().availableProcessors();
-		return calculateEigenValuesSymmetric( tensor, factory, u, nThreads );
+		return calculateEigenValuesSymmetric( tensor, factory, nThreads );
 	}
 
 	/**
@@ -178,8 +175,6 @@ public class TensorEigenValues
 	 *
 	 * @param factory
 	 *            {@link ImgFactory} used for creating the result image.
-	 * @param u
-	 *            Variable necessary for creation of result image.
 	 * @param nThreads
 	 *            Number of threads/workers used for parallel computation of
 	 *            eigenvalues.
@@ -188,11 +183,10 @@ public class TensorEigenValues
 	public static < T extends RealType< T >, U extends RealType< U > > Img< U > calculateEigenValuesSymmetric(
 			final RandomAccessibleInterval< T > tensor,
 			final ImgFactory< U > factory,
-			final U u,
 			final int nThreads )
 	{
 		final ExecutorService es = Executors.newFixedThreadPool( nThreads );
-		return calculateEigenValuesSymmetric( tensor, factory, u, nThreads, es );
+		return calculateEigenValuesSymmetric( tensor, factory, nThreads, es );
 	}
 
 	/**
@@ -206,8 +200,6 @@ public class TensorEigenValues
 	 *
 	 * @param factory
 	 *            {@link ImgFactory} used for creating the result image.
-	 * @param u
-	 *            Variable necessary for creation of result image.
 	 * @param nThreads
 	 *            Number of threads/workers used for parallel computation of
 	 *            eigenvalues.
@@ -219,17 +211,12 @@ public class TensorEigenValues
 	public static < T extends RealType< T >, U extends RealType< U > > Img< U > calculateEigenValuesSymmetric(
 			final RandomAccessibleInterval< T > tensor,
 			final ImgFactory< U > factory,
-			final U u,
 			final int nThreads,
 			final ExecutorService es )
 	{
-
-		final Img< U > eigenvalues = createAppropriateResultImg( tensor, factory, u );
-
+		final Img< U > eigenvalues = createAppropriateResultImg( tensor, factory );
 		calculateEigenValuesSymmetric( tensor, eigenvalues, nThreads, es );
-
 		return eigenvalues;
-
 	}
 
 	// square
@@ -251,11 +238,10 @@ public class TensorEigenValues
 	 */
 	public static < T extends RealType< T >, U extends RealType< U > > Img< U > calculateEigenValuesSquare(
 			final RandomAccessibleInterval< T > tensor,
-			final ImgFactory< U > factory,
-			final U u )
+			final ImgFactory< U > factory )
 	{
 		final int nThreads = Runtime.getRuntime().availableProcessors();
-		return calculateEigenValuesSquare( tensor, factory, u, nThreads );
+		return calculateEigenValuesSquare( tensor, factory, nThreads );
 	}
 
 	/**
@@ -279,11 +265,10 @@ public class TensorEigenValues
 	public static < T extends RealType< T >, U extends RealType< U > > Img< U > calculateEigenValuesSquare(
 			final RandomAccessibleInterval< T > tensor,
 			final ImgFactory< U > factory,
-			final U u,
 			final int nThreads )
 	{
 		final ExecutorService es = Executors.newFixedThreadPool( nThreads );
-		return calculateEigenValuesSquare( tensor, factory, u, nThreads, es );
+		return calculateEigenValuesSquare( tensor, factory, nThreads, es );
 	}
 
 	/**
@@ -310,15 +295,12 @@ public class TensorEigenValues
 	public static < T extends RealType< T >, U extends RealType< U > > Img< U > calculateEigenValuesSquare(
 			final RandomAccessibleInterval< T > tensor,
 			final ImgFactory< U > factory,
-			final U u,
 			final int nThreads,
 			final ExecutorService es )
 	{
 
-		final Img< U > eigenvalues = createAppropriateResultImg( tensor, factory, u );
-
+		final Img< U > eigenvalues = createAppropriateResultImg( tensor, factory );
 		calculateEigenValuesSquare( tensor, eigenvalues, nThreads, es );
-
 		return eigenvalues;
 
 	}
@@ -343,13 +325,10 @@ public class TensorEigenValues
 	public static < T extends RealType< T >, U extends RealType< U > > Img< U > calculateEigenValues(
 			final RandomAccessibleInterval< T > tensor,
 			final ImgFactory< U > factory,
-			final EigenValues ev,
-			final U u )
+			final EigenValues ev )
 	{
-
 		final int nThreads = Runtime.getRuntime().availableProcessors();
-		return calculateEigenValues( tensor, factory, ev, u, nThreads );
-
+		return calculateEigenValues( tensor, factory, ev, nThreads );
 	}
 
 	/**
@@ -363,8 +342,6 @@ public class TensorEigenValues
 	 * @param ev
 	 *            Implementation that specifies how to calculate eigenvalues
 	 *            from last dimension of input.
-	 * @param u
-	 *            Variable necessary for creation of result image.
 	 * @param nThreads
 	 *            Number of threads/workers used for parallel computation of
 	 *            eigenvalues.
@@ -374,13 +351,10 @@ public class TensorEigenValues
 			final RandomAccessibleInterval< T > tensor,
 			final ImgFactory< U > factory,
 			final EigenValues ev,
-			final U u,
 			final int nThreads )
 	{
-
 		final ExecutorService es = Executors.newFixedThreadPool( nThreads );
-		return calculateEigenValues( tensor, factory, ev, u, nThreads, es );
-
+		return calculateEigenValues( tensor, factory, ev, nThreads, es );
 	}
 
 	/**
@@ -394,8 +368,6 @@ public class TensorEigenValues
 	 * @param ev
 	 *            Implementation that specifies how to calculate eigenvalues
 	 *            from last dimension of input.
-	 * @param u
-	 *            Variable necessary for creation of result image.
 	 * @param nThreads
 	 *            Number of threads/workers used for parallel computation of
 	 *            eigenvalues.
@@ -408,14 +380,11 @@ public class TensorEigenValues
 			final RandomAccessibleInterval< T > tensor,
 			final ImgFactory< U > factory,
 			final EigenValues ev,
-			final U u,
 			final int nThreads,
 			final ExecutorService es )
 	{
-		final Img< U > eigenvalues = createAppropriateResultImg( tensor, factory, u );
-
+		final Img< U > eigenvalues = createAppropriateResultImg( tensor, factory );
 		calculateEigenValues( tensor, eigenvalues, ev, nThreads, es );
-
 		return eigenvalues;
 	}
 
@@ -808,21 +777,16 @@ public class TensorEigenValues
 	 *            n+1 dimensional {@link RandomAccessibleInterval}.
 	 * @param factory
 	 *            {@link ImgFactory} used for creating the result image.
-	 * @param u
-	 *            Variable necessary for creating the result image.
 	 * @return n+1 dimensional {@link Img} with size n in the last dimension.
 	 */
 	public static < T extends RealType< T >, U extends RealType< U > > Img< U > createAppropriateResultImg(
 			final RandomAccessibleInterval< T > tensor,
-			final ImgFactory< U > factory,
-			final U u )
+			final ImgFactory< U > factory )
 	{
 		final int nDim = tensor.numDimensions();
 		final long[] dimensions = new long[ nDim ];
 		tensor.dimensions( dimensions );
 		dimensions[ nDim - 1 ] = nDim - 1;
-		return factory.create( dimensions, u );
+		return factory.create( dimensions );
 	}
-
-
 }
