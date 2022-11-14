@@ -3,12 +3,14 @@ package net.imagej.circleskinner.hough;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 import org.scijava.Priority;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 import org.scijava.thread.ThreadService;
 
+import ij.Prefs;
 import net.imagej.ops.special.function.AbstractUnaryFunctionOp;
 import net.imglib2.Localizable;
 import net.imglib2.Point;
@@ -21,6 +23,7 @@ import net.imglib2.algorithm.localextrema.LocalExtrema.LocalNeighborhoodCheck;
 import net.imglib2.algorithm.localextrema.RefinedPeak;
 import net.imglib2.algorithm.localextrema.SubpixelLocalization;
 import net.imglib2.algorithm.neighborhood.Neighborhood;
+import net.imglib2.algorithm.neighborhood.RectangleShape;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.util.Util;
@@ -80,69 +83,85 @@ public class HoughCircleLocalMaxDetectorOp< T extends RealType< T > & NativeType
 				return new Circle( center, radius, ls );
 			}
 		};
-		final ArrayList< Circle > peaks = LocalExtrema.findLocalExtrema( input, maximumCheck, threadService.getExecutorService() );
-
-		if ( isCanceled() )
-			return Collections.emptyList();
-
-		/*
-		 * Non-maxima suppression.
-		 * 
-		 * Rule: when one circle has a center inside one another, we discard the
-		 * one with the highest sensitivity.
-		 */
-
-		// Sort by ascending sensitivity.
-		Collections.sort( peaks );
-
-		final List< Circle > retained = new ArrayList<>();
-		NEXT_CIRCLE: for ( final Circle tested : peaks )
+		final int nTasks = Prefs.getThreads();
+		List< Circle > peaks;
+		try
 		{
-			for ( final Circle kept : retained )
+			peaks = LocalExtrema.findLocalExtrema(
+					input,
+					maximumCheck,
+					new RectangleShape( 1, true ),
+					threadService.getExecutorService(),
+					nTasks );
+
+			if ( isCanceled() )
+				return Collections.emptyList();
+
+			/*
+			 * Non-maxima suppression.
+			 * 
+			 * Rule: when one circle has a center inside one another, we discard
+			 * the one with the highest sensitivity.
+			 */
+
+			// Sort by ascending sensitivity.
+			Collections.sort( peaks );
+
+			final List< Circle > retained = new ArrayList<>();
+			NEXT_CIRCLE: for ( final Circle tested : peaks )
 			{
-				if ( kept.contains( tested ) )
-					continue NEXT_CIRCLE;
+				for ( final Circle kept : retained )
+				{
+					if ( kept.contains( tested ) )
+						continue NEXT_CIRCLE;
+				}
+
+				// Was not found in any circle, so we keep it.
+				retained.add( tested );
 			}
 
-			// Was not found in any circle, so we keep it.
-			retained.add( tested );
+			if ( isCanceled() )
+				return Collections.emptyList();
+
+			/*
+			 * Refine local extrema.
+			 */
+
+			final SubpixelLocalization< Circle, T > spl = new SubpixelLocalization<>( numDimensions );
+			spl.setAllowMaximaTolerance( true );
+			spl.setMaxNumMoves( 10 );
+			final ArrayList< RefinedPeak< Circle > > refined = spl.process( retained, input, input );
+
+			if ( isCanceled() )
+				return Collections.emptyList();
+
+			/*
+			 * Create circles.
+			 */
+
+			final ArrayList< HoughCircle > circles = new ArrayList<>( refined.size() );
+			for ( final RefinedPeak< Circle > peak : refined )
+			{
+				final double radius = minRadius + ( peak.getDoublePosition( numDimensions - 1 ) ) * stepRadius;
+				final double ls = 2. * Math.PI * radius * circleThickness / peak.getValue();
+				if ( ls < 0 || ls > sensitivity )
+					continue;
+				final RealPoint center = new RealPoint( numDimensions - 1 );
+				for ( int d = 0; d < numDimensions - 1; d++ )
+					center.setPosition( peak.getDoublePosition( d ), d );
+
+				circles.add( new HoughCircle( center, radius, circleThickness, ls ) );
+			}
+
+			Collections.sort( circles );
+			return circles;
 		}
-
-		if ( isCanceled() )
-			return Collections.emptyList();
-
-		/*
-		 * Refine local extrema.
-		 */
-
-		final SubpixelLocalization< Circle, T > spl = new SubpixelLocalization<>( numDimensions );
-		spl.setAllowMaximaTolerance( true );
-		spl.setMaxNumMoves( 10 );
-		final ArrayList< RefinedPeak< Circle > > refined = spl.process( retained, input, input );
-
-		if ( isCanceled() )
-			return Collections.emptyList();
-
-		/*
-		 * Create circles.
-		 */
-
-		final ArrayList< HoughCircle > circles = new ArrayList<>( refined.size() );
-		for ( final RefinedPeak< Circle > peak : refined )
+		catch ( InterruptedException | ExecutionException e )
 		{
-			final double radius = minRadius + ( peak.getDoublePosition( numDimensions - 1 ) ) * stepRadius;
-			final double ls = 2. * Math.PI * radius * circleThickness / peak.getValue();
-			if (ls < 0 || ls > sensitivity)
-				continue;
-			final RealPoint center = new RealPoint( numDimensions - 1 );
-			for ( int d = 0; d < numDimensions - 1; d++ )
-				center.setPosition( peak.getDoublePosition( d ), d );
-
-			circles.add( new HoughCircle( center, radius, circleThickness, ls ) );
+			e.printStackTrace();
 		}
+		return new ArrayList<>();
 
-		Collections.sort( circles );
-		return circles;
 	}
 
 	// -- Cancelable methods --
