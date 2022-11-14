@@ -81,6 +81,7 @@ import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 import org.scijava.prefs.PrefService;
 import org.scijava.ui.UIService;
+import org.scijava.util.VersionUtils;
 
 import ij.ImagePlus;
 import ij.WindowManager;
@@ -118,7 +119,7 @@ public class CircleSkinnerGUI< T extends RealType< T > & NativeType< T > > exten
 
 	public static final String PLUGIN_NAME = "CircleSkinner";
 
-	public static final String PLUGIN_VERSION = "1.5.3-SNAPSHOT";
+	public static final String PLUGIN_VERSION = VersionUtils.getVersion( CircleSkinnerGUI.class );
 
 	private static final String RESULTS_TABLE_TITLE = PLUGIN_NAME + " Results";
 
